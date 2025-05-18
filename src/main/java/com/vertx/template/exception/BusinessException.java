@@ -1,8 +1,11 @@
 package com.vertx.template.exception;
 
+import lombok.Getter;
+
 /**
  * 业务异常
  */
+@Getter
 public class BusinessException extends RuntimeException {
   private final int code;
 
@@ -16,7 +19,4 @@ public class BusinessException extends RuntimeException {
     this.code = 500;
   }
 
-  public int getCode() {
-    return code;
-  }
 }
