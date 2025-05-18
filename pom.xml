@@ -21,6 +21,9 @@
     <logback.version>1.4.14</logback.version>
     <slf4j.version>2.0.13</slf4j.version>
     <jackson.version>2.15.2</jackson.version>
+    <reflections.version>0.10.2</reflections.version>
+    <javax.inject.version>1</javax.inject.version>
+    <guice.version>5.1.0</guice.version>
     <main.verticle>com.vertx.template.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
   </properties>
@@ -97,11 +100,23 @@
       <version>${junit-jupiter.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- 添加依赖注入支持 -->
+    <!-- 依赖注入相关 -->
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
-      <version>5.1.0</version>
+      <version>${guice.version}</version>
+    </dependency>
+    <!-- JSR-330标准注解 -->
+    <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>${javax.inject.version}</version>
+    </dependency>
+    <!-- 添加注解扫描支持 -->
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>${reflections.version}</version>
     </dependency>
   </dependencies>
 
@@ -157,6 +172,5 @@
       </plugin>
     </plugins>
   </build>
-
 
 </project>

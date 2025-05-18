@@ -1,6 +1,7 @@
 package com.vertx.template.service.impl;
 
-import com.google.inject.Inject;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import com.vertx.template.model.User;
 import com.vertx.template.service.UserService;
 
@@ -8,11 +9,12 @@ import io.vertx.core.Future;
 import java.util.ArrayList;
 import java.util.List;
 
+@Singleton
 public class UserServiceImpl implements UserService {
 
   @Inject
   public UserServiceImpl() {
-    // 无参构造函数，便于Guice创建实例
+    // 无参构造函数，便于依赖注入创建实例
   }
 
   @Override

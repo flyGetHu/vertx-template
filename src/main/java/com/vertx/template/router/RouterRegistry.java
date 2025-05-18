@@ -5,7 +5,7 @@ import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.model.ApiResponse;
-import com.vertx.template.routes.UserRoutes;
+import com.vertx.template.router.handler.AnnotationRouterHandler;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -14,9 +14,6 @@ import io.vertx.ext.web.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * 路由注册中心，负责注册所有路由模块
  */
@@ -24,9 +21,9 @@ public class RouterRegistry {
   private static final Logger logger = LoggerFactory.getLogger(RouterRegistry.class);
   private final Vertx vertx;
   private final JsonObject config;
-  private final List<RouteGroup> routeGroups = new ArrayList<>();
   private final Injector injector;
   private final Router mainRouter;
+  private static final String BASE_PACKAGE = "com.vertx.template";
 
   /**
    * 构造函数
@@ -41,20 +38,6 @@ public class RouterRegistry {
     // 创建Guice注入器
     this.injector = Guice.createInjector(new AppModule(vertx, config));
     this.mainRouter = injector.getInstance(Router.class);
-
-    // 初始化路由组
-    initRouteGroups();
-  }
-
-  /**
-   * 初始化所有路由组
-   */
-  private void initRouteGroups() {
-    // 通过依赖注入获取路由组实例
-    routeGroups.add(injector.getInstance(UserRoutes.class));
-
-    // 此处可以添加更多路由组...
-    // 例如：routeGroups.add(injector.getInstance(ProductRoutes.class));
   }
 
   /**
@@ -66,8 +49,8 @@ public class RouterRegistry {
     // 注册全局中间件
     registerMiddlewares();
 
-    // 注册业务路由
-    registerBusinessRoutes();
+    // 注册基于注解的路由
+    registerAnnotationRoutes();
 
     // 注册错误处理（应放在最后）
     registerExceptionHandler();
@@ -85,15 +68,16 @@ public class RouterRegistry {
   }
 
   /**
-   * 注册业务路由
+   * 注册基于注解的路由
    */
-  private void registerBusinessRoutes() {
-    // 注册所有路由组
-    for (RouteGroup group : routeGroups) {
-      group.register(mainRouter);
+  private void registerAnnotationRoutes() {
+    try {
+      AnnotationRouterHandler annotationRouterHandler = injector.getInstance(AnnotationRouterHandler.class);
+      annotationRouterHandler.registerRoutes(mainRouter);
+      logger.info("基于注解的路由注册完成");
+    } catch (Exception e) {
+      logger.error("注册基于注解的路由失败", e);
     }
-
-    logger.info("所有业务路由注册完成");
   }
 
   /**

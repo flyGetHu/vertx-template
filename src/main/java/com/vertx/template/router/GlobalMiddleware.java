@@ -1,6 +1,7 @@
 package com.vertx.template.router;
 
-import com.google.inject.Inject;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -17,6 +18,7 @@ import java.util.Set;
 /**
  * 全局中间件配置类
  */
+@Singleton
 public class GlobalMiddleware {
   private static final Logger logger = LoggerFactory.getLogger(GlobalMiddleware.class);
   private final Vertx vertx;
