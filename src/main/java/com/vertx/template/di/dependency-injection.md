@@ -107,6 +107,7 @@ public void adminMethod() {...}
 1. 创建控制器类并添加@RestController注解
 2. 添加@RequestMapping指定基础路径
 3. 使用@GetMapping等注解定义具体路由方法
+4. 控制器方法直接返回数据对象，无需包装Future
 
 示例：
 ```java
@@ -119,14 +120,17 @@ public class ProductController {
   public ProductController(ProductService service) {...}
 
   @GetMapping("/:id")
-  public Future<Product> getProduct(RoutingContext ctx) {
+  public Product getProduct(RoutingContext ctx) {
     String id = ctx.pathParam("id");
-    return productService.getById(id);
+    // 如果服务方法返回Future，可以使用Future.await解包
+    return Future.await(productService.getById(id));
   }
 
   @PostMapping("")
-  public Future<Product> createProduct(RoutingContext ctx) {
-    // 处理POST请求
+  public Product createProduct(RoutingContext ctx) {
+    // 处理POST请求并直接返回数据对象
+    Product product = ctx.getBodyAsJson().mapTo(Product.class);
+    return Future.await(productService.create(product));
   }
 }
 ```

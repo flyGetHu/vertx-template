@@ -21,7 +21,7 @@
 - 自动扫描带有@RestController注解的类
 - 处理各种路由注解并注册对应的处理器
 - 支持方法参数自动注入（如RoutingContext）
-- 自动处理返回值，包括Future结果的处理
+- 自动处理返回值，支持直接返回数据对象
 
 ### 3. 路由注册中心
 
@@ -42,6 +42,14 @@
 - 请求日志和计时
 - 其他全局处理逻辑
 
+### 5. 响应处理器
+
+[ResponseHandler](mdc:src/main/java/com/vertx/template/handler/ResponseHandler.java)负责统一处理响应：
+
+- 自动将返回数据包装成标准ApiResponse格式
+- 统一处理异常和错误响应
+- 设置响应头和状态码
+
 ## 实现示例
 
 [UserController](mdc:src/main/java/com/vertx/template/controller/UserController.java)展示了基于注解路由的标准实现：
@@ -58,15 +66,16 @@ public class UserController {
     }
 
     @GetMapping("")
-    public Future<List<User>> getUsers() {
-        return userService.getUsers();
+    public List<User> getUsers() {
+        // 直接返回数据对象，而不是Future
+        return Future.await(userService.getUsers());
     }
 
     @GetMapping("/:id")
-    public Future<User> getUserById(RoutingContext ctx) {
+    public User getUserById(RoutingContext ctx) {
         String id = ctx.pathParam("id");
         // 验证和处理...
-        return userService.getUserById(id);
+        return Future.await(userService.getUserById(id));
     }
 }
 ```
@@ -78,9 +87,10 @@ public class UserController {
 1. 创建控制器类并添加`@RestController`注解
 2. 添加`@RequestMapping`注解指定基础路径
 3. 使用`@GetMapping`、`@PostMapping`等注解定义具体路由方法
-4. 添加`@Singleton`注解确保单例模式
-5. 使用`@Inject`注入所需依赖
-6. 路由将被自动扫描并注册
+4. 控制器方法直接返回数据对象，系统会自动包装成标准响应格式
+5. 添加`@Singleton`注解确保单例模式
+6. 使用`@Inject`注入所需依赖
+7. 路由将被自动扫描并注册
 
 示例：
 ```java
@@ -97,19 +107,22 @@ public class ProductController {
     }
 
     @GetMapping("")
-    public Future<List<Product>> getAllProducts() {
-        return productService.getAllProducts();
+    public List<Product> getAllProducts() {
+        // 直接返回数据，无需包装Future
+        return Future.await(productService.getAllProducts());
     }
 
     @PostMapping("")
-    public Future<Product> createProduct(RoutingContext ctx) {
-        // 处理创建产品的逻辑
+    public Product createProduct(RoutingContext ctx) {
+        // 解析请求体并直接返回创建的产品
+        Product product = ctx.getBodyAsJson().mapTo(Product.class);
+        return Future.await(productService.create(product));
     }
 
     @GetMapping("/:id")
-    public Future<Product> getProductById(RoutingContext ctx) {
+    public Product getProductById(RoutingContext ctx) {
         String id = ctx.pathParam("id");
-        return productService.getById(id);
+        return Future.await(productService.getById(id));
     }
 }
 ```

@@ -32,15 +32,16 @@ public class UserController {
    * 获取所有用户
    */
   @GetMapping("")
-  public Future<List<User>> getUsers() {
-    return userService.getUsers();
+  public List<User> getUsers() {
+    // 直接返回数据对象，不再包装Future
+    return Future.await(userService.getUsers());
   }
 
   /**
    * 根据ID获取用户
    */
   @GetMapping("/:id")
-  public Future<User> getUserById(RoutingContext ctx) {
+  public User getUserById(RoutingContext ctx) {
     String id = ctx.pathParam("id");
 
     // 验证ID格式
@@ -48,6 +49,7 @@ public class UserController {
       throw new BusinessException(400, "User ID is required");
     }
 
-    return userService.getUserById(id);
+    // 直接返回数据对象，不再包装Future
+    return Future.await(userService.getUserById(id));
   }
 }
