@@ -1,13 +1,19 @@
 package com.vertx.template.router.handler;
 
 import com.google.inject.Injector;
+import com.vertx.template.exception.BusinessException;
+import com.vertx.template.exception.ValidationException;
 import com.vertx.template.handler.ResponseHandler;
 import com.vertx.template.router.annotation.*;
+import com.vertx.template.router.validation.ValidationUtils;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import jakarta.validation.Valid;
 import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +24,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 注解路由处理器，负责扫描并注册带有路由注解的控制器方法
@@ -169,7 +179,7 @@ public class AnnotationRouterHandler {
   private Handler<RoutingContext> createHandler(Object controller, Method method) {
     return responseHandler.handle(ctx -> {
       try {
-        // 判断方法参数类型
+        // 判断方法参数类型并注入值
         Object[] args = resolveMethodArgs(method, ctx);
 
         // 调用控制器方法
@@ -181,9 +191,15 @@ public class AnnotationRouterHandler {
         }
 
         return result;
+      } catch (ValidationException e) {
+        logger.debug("参数校验失败: {}", e.getMessage());
+        throw e;
       } catch (Exception e) {
         logger.error("调用控制器方法时发生异常", e);
-        throw new RuntimeException(e);
+        if (e.getCause() instanceof BusinessException) {
+          throw (BusinessException) e.getCause();
+        }
+        throw new BusinessException(500, "Internal Server Error");
       }
     });
   }
@@ -194,19 +210,138 @@ public class AnnotationRouterHandler {
   private Object[] resolveMethodArgs(Method method, RoutingContext ctx) {
     Parameter[] parameters = method.getParameters();
     Object[] args = new Object[parameters.length];
+    Annotation[][] paramAnnotations = method.getParameterAnnotations();
 
     for (int i = 0; i < parameters.length; i++) {
       Parameter parameter = parameters[i];
       Class<?> paramType = parameter.getType();
+      Annotation[] annotations = paramAnnotations[i];
 
-      if (paramType.equals(RoutingContext.class)) {
+      // 检查参数是否有注解
+      if (annotations.length > 0) {
+        args[i] = resolveAnnotatedParam(parameter, annotations, ctx);
+      } else if (paramType.equals(RoutingContext.class)) {
+        // 处理RoutingContext类型参数
         args[i] = ctx;
       } else {
-        // 这里可以扩展更多参数类型的处理，例如请求体对象、路径参数等
+        // 对于没有注解的非RoutingContext参数，设为null
         args[i] = null;
       }
     }
 
     return args;
+  }
+
+  /**
+   * 解析带注解的参数
+   */
+  private Object resolveAnnotatedParam(Parameter parameter, Annotation[] annotations, RoutingContext ctx) {
+    Class<?> paramType = parameter.getType();
+
+    for (Annotation annotation : annotations) {
+      return switch (annotation) {
+        case PathParam pathParam -> {
+          String name = pathParam.value().isEmpty() ? parameter.getName() : pathParam.value();
+          String value = ctx.pathParam(name);
+          yield convertValue(value, paramType);
+        }
+
+        case QueryParam queryParam -> {
+          String name = queryParam.value().isEmpty() ? parameter.getName() : queryParam.value();
+          String value = ctx.request().getParam(name);
+
+          if (value == null && queryParam.required()) {
+            throw new ValidationException(String.format("查询参数 %s 不能为空", name));
+          }
+
+          yield convertValue(value, paramType);
+        }
+
+        case RequestBody ignored -> {
+          try {
+            Object body = ctx.body().asJsonObject().mapTo(paramType);
+            if (body == null) {
+              throw new ValidationException("请求体不能为空");
+            }
+
+            boolean needValidation = Arrays.stream(annotations)
+                .anyMatch(a -> a instanceof Valid);
+
+            if (needValidation) {
+              ValidationUtils.validate(body);
+            }
+
+            yield body;
+          } catch (DecodeException e) {
+            throw new ValidationException("请求体解析失败: " + e.getMessage());
+          }
+        }
+
+        case HeaderParam headerParam -> {
+          String name = headerParam.value().isEmpty() ? parameter.getName() : headerParam.value();
+          String value = ctx.request().getHeader(name);
+
+          if (value == null && headerParam.required()) {
+            throw new ValidationException(String.format("请求头 %s 不能为空", name));
+          }
+
+          yield convertValue(value, paramType);
+        }
+
+        default -> null;
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * 转换字符串值为指定类型
+   */
+  private Object convertValue(String value, Class<?> targetType) {
+    if (value == null) {
+      return null;
+    }
+
+    return switch (targetType) {
+      case Class<?> clazz when clazz == String.class -> value;
+      case Class<?> clazz when clazz == Integer.class || clazz == int.class -> parseInteger(value);
+      case Class<?> clazz when clazz == Long.class || clazz == long.class -> parseLong(value);
+      case Class<?> clazz when clazz == Double.class || clazz == double.class -> parseDouble(value);
+      case Class<?> clazz when clazz == Boolean.class || clazz == boolean.class -> Boolean.parseBoolean(value);
+      default -> parseComplexType(value, targetType);
+    };
+  }
+
+  private Integer parseInteger(String value) {
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+      throw new ValidationException(String.format("无法将值 '%s' 转换为整数", value));
+    }
+  }
+
+  private Long parseLong(String value) {
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      throw new ValidationException(String.format("无法将值 '%s' 转换为长整数", value));
+    }
+  }
+
+  private Double parseDouble(String value) {
+    try {
+      return Double.parseDouble(value);
+    } catch (NumberFormatException e) {
+      throw new ValidationException(String.format("无法将值 '%s' 转换为浮点数", value));
+    }
+  }
+
+  private Object parseComplexType(String value, Class<?> targetType) {
+    try {
+      return new JsonObject().put("value", value).mapTo(Map.class).get("value");
+    } catch (Exception e) {
+      throw new ValidationException(String.format("不支持的参数类型转换: %s", targetType.getName()));
+    }
   }
 }

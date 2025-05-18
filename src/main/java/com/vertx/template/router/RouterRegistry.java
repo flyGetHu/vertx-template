@@ -84,6 +84,51 @@ public class RouterRegistry {
    * 注册全局异常处理器
    */
   private void registerExceptionHandler() {
+    mainRouter.errorHandler(404, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(404, "Not Found")));
+    });
+    mainRouter.errorHandler(405, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(405, "Method Not Allowed")));
+    });
+    mainRouter.errorHandler(400, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(400, "Bad Request")));
+    });
+    mainRouter.errorHandler(500, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(500, "Internal Server Error")));
+    });
+    mainRouter.errorHandler(502, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(502, "Bad Gateway")));
+    });
+    mainRouter.errorHandler(503, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(503, "Service Unavailable")));
+    });
+    mainRouter.errorHandler(504, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(504, "Gateway Timeout")));
+    });
+    mainRouter.errorHandler(505, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(505, "HTTP Version Not Supported")));
+    });
+    mainRouter.errorHandler(506, ctx -> {
+      ctx.response()
+          .setStatusCode(200)
+          .end(Json.encodePrettily(ApiResponse.error(506, "Variant Also Negotiates")));
+    });
     mainRouter.route().failureHandler(ctx -> {
       ApiResponse<?> response;
       if (ctx.failure() instanceof BusinessException) {

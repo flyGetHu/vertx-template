@@ -14,6 +14,7 @@
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
+    <jdk.version>21</jdk.version>
 
     <vertx.version>4.5.14</vertx.version>
     <junit-jupiter.version>5.9.1</junit-jupiter.version>
@@ -23,7 +24,9 @@
     <jackson.version>2.15.2</jackson.version>
     <reflections.version>0.10.2</reflections.version>
     <javax.inject.version>1</javax.inject.version>
-    <guice.version>5.1.0</guice.version>
+    <validation.version>3.0.2</validation.version>
+    <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
+    <el.api.version>4.0.2</el.api.version>
     <main.verticle>com.vertx.template.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
   </properties>
@@ -104,7 +107,7 @@
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
-      <version>${guice.version}</version>
+      <version>5.1.0</version>
     </dependency>
     <!-- JSR-330标准注解 -->
     <dependency>
@@ -118,6 +121,23 @@
       <artifactId>reflections</artifactId>
       <version>${reflections.version}</version>
     </dependency>
+
+    <!-- 参数校验相关依赖 -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <version>${validation.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <version>${hibernate.validator.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>jakarta.el</artifactId>
+      <version>${el.api.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -126,7 +146,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven-compiler-plugin.version}</version>
         <configuration>
-          <release>17</release>
+          <release>21</release>
         </configuration>
       </plugin>
       <plugin>

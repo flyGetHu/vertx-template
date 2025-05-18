@@ -3,6 +3,7 @@ package com.vertx.template.handler;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import com.vertx.template.exception.BusinessException;
+import com.vertx.template.exception.ValidationException;
 import com.vertx.template.model.ApiResponse;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
@@ -67,11 +68,18 @@ public class ResponseHandler {
    * 处理异常
    */
   private void handleException(RoutingContext ctx, Throwable e) {
-    if (e instanceof BusinessException) {
+    if (e instanceof ValidationException) {
+      ValidationException ex = (ValidationException) e;
+      ApiResponse<?> response = ApiResponse.error(ex.getCode(), ex.getMessage());
+      // 添加验证错误信息
+      response.setExtra("validationErrors", ex.getValidationErrors());
+      sendResponse(ctx, response);
+    } else if (e instanceof BusinessException) {
       BusinessException ex = (BusinessException) e;
       sendResponse(ctx, ApiResponse.error(ex.getCode(), ex.getMessage()));
     } else {
-      sendResponse(ctx, ApiResponse.error(500, e.getMessage() != null ? e.getMessage() : "Internal Server Error"));
+      String errorMessage = e.getMessage() != null ? e.getMessage() : "Internal Server Error";
+      sendResponse(ctx, ApiResponse.error(500, errorMessage));
     }
   }
 }
