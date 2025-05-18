@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Running Maven validate (Spotless check)..."
+# 跳过测试，仅做格式校验
+mvn validate -q -DskipTests
+
+echo "Spotless 校验通过，允许提交。"
