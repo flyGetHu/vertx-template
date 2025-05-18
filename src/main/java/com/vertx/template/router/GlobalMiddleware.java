@@ -1,5 +1,6 @@
 package com.vertx.template.router;
 
+import com.google.inject.Inject;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -29,6 +30,7 @@ public class GlobalMiddleware {
    * @param router 路由器实例
    * @param config 配置
    */
+  @Inject
   public GlobalMiddleware(Vertx vertx, Router router, JsonObject config) {
     this.vertx = vertx;
     this.router = router;

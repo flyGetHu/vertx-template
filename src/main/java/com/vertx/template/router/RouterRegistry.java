@@ -1,11 +1,12 @@
 package com.vertx.template.router;
 
-import com.vertx.template.controller.UserController;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.vertx.template.di.AppModule;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.model.ApiResponse;
 import com.vertx.template.routes.UserRoutes;
-import com.vertx.template.service.UserService;
-import com.vertx.template.service.UserServiceImpl;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -22,9 +23,10 @@ import java.util.List;
 public class RouterRegistry {
   private static final Logger logger = LoggerFactory.getLogger(RouterRegistry.class);
   private final Vertx vertx;
-  private final Router mainRouter;
   private final JsonObject config;
   private final List<RouteGroup> routeGroups = new ArrayList<>();
+  private final Injector injector;
+  private final Router mainRouter;
 
   /**
    * 构造函数
@@ -35,7 +37,10 @@ public class RouterRegistry {
   public RouterRegistry(Vertx vertx, JsonObject config) {
     this.vertx = vertx;
     this.config = config;
-    this.mainRouter = Router.router(vertx);
+
+    // 创建Guice注入器
+    this.injector = Guice.createInjector(new AppModule(vertx, config));
+    this.mainRouter = injector.getInstance(Router.class);
 
     // 初始化路由组
     initRouteGroups();
@@ -45,13 +50,11 @@ public class RouterRegistry {
    * 初始化所有路由组
    */
   private void initRouteGroups() {
-    // 添加用户路由组
-    UserService userService = new UserServiceImpl();
-    UserController userController = new UserController(userService);
-    routeGroups.add(new UserRoutes(userController));
+    // 通过依赖注入获取路由组实例
+    routeGroups.add(injector.getInstance(UserRoutes.class));
 
     // 此处可以添加更多路由组...
-    // 例如：routeGroups.add(new ProductRoutes(productController));
+    // 例如：routeGroups.add(injector.getInstance(ProductRoutes.class));
   }
 
   /**
@@ -76,8 +79,9 @@ public class RouterRegistry {
    * 注册全局中间件
    */
   private void registerMiddlewares() {
-    // 注册全局中间件
-    new GlobalMiddleware(vertx, mainRouter, config).register();
+    // 通过注入器获取全局中间件
+    GlobalMiddleware middleware = injector.getInstance(GlobalMiddleware.class);
+    middleware.register();
   }
 
   /**

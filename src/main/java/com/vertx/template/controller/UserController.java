@@ -1,5 +1,6 @@
 package com.vertx.template.controller;
 
+import com.google.inject.Inject;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.model.ApiResponse;
 import com.vertx.template.model.User;
@@ -14,6 +15,7 @@ import java.util.List;
 public class UserController {
   private final UserService userService;
 
+  @Inject
   public UserController(UserService userService) {
     this.userService = userService;
   }

@@ -1,5 +1,6 @@
 package com.vertx.template.routes;
 
+import com.google.inject.Inject;
 import com.vertx.template.controller.UserController;
 import com.vertx.template.router.RouteGroup;
 import io.vertx.ext.web.Router;
@@ -18,6 +19,7 @@ public class UserRoutes implements RouteGroup {
    *
    * @param controller 用户控制器
    */
+  @Inject
   public UserRoutes(UserController controller) {
     this.controller = controller;
   }
