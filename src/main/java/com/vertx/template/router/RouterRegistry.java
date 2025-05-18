@@ -86,26 +86,46 @@ public class RouterRegistry {
   private void registerExceptionHandler() {
     mainRouter.errorHandler(404, ctx -> {
       ctx.response()
-          .setStatusCode(200)
-          .end(Json.encodePrettily(ApiResponse.error(404, "Not Found")));
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(ApiResponse.error(404, "Not Found")));
     });
     mainRouter.errorHandler(405, ctx -> {
       ctx.response()
-          .setStatusCode(200)
-          .end(Json.encodePrettily(ApiResponse.error(405, "Method Not Allowed")));
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(ApiResponse.error(405, "Method Not Allowed")));
+    });
+    // 429
+    mainRouter.errorHandler(429, ctx -> {
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(ApiResponse.error(429, "Too Many Requests")));
+    });
+    mainRouter.errorHandler(503, ctx -> {
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(ApiResponse.error(503, "Service Unavailable")));
+    });
+    mainRouter.errorHandler(504, ctx -> {
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(ApiResponse.error(504, "Gateway Timeout")));
     });
     mainRouter.route().failureHandler(ctx -> {
       ApiResponse<?> response;
-      if (ctx.failure() instanceof BusinessException) {
-        BusinessException ex = (BusinessException) ctx.failure();
+      if (ctx.failure() instanceof BusinessException ex) {
         response = ApiResponse.error(ex.getCode(), ex.getMessage());
       } else {
         response = ApiResponse.error(500, ctx.failure() != null ? ctx.failure().getMessage() : "Internal Server Error");
       }
       ctx.response()
-          .setStatusCode(200) // 强制HTTP状态码为200
-          .putHeader("content-type", "application/json")
-          .end(Json.encodePrettily(response));
+        .setStatusCode(200) // 强制HTTP状态码为200
+        .putHeader("content-type", "application/json")
+        .end(Json.encodePrettily(response));
     });
 
     logger.debug("全局异常处理器配置完成");
