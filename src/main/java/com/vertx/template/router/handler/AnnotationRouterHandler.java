@@ -237,62 +237,73 @@ public class AnnotationRouterHandler {
    */
   private Object resolveAnnotatedParam(Parameter parameter, Annotation[] annotations, RoutingContext ctx) {
     Class<?> paramType = parameter.getType();
+    Object result = null;
 
+    // 先找到主要参数注解（PathParam、QueryParam等）
     for (Annotation annotation : annotations) {
-      return switch (annotation) {
-        case PathParam pathParam -> {
-          String name = pathParam.value().isEmpty() ? parameter.getName() : pathParam.value();
-          String value = ctx.pathParam(name);
-          yield convertValue(value, paramType);
-        }
+      if (annotation instanceof PathParam ||
+          annotation instanceof QueryParam ||
+          annotation instanceof RequestBody ||
+          annotation instanceof HeaderParam) {
 
-        case QueryParam queryParam -> {
-          String name = queryParam.value().isEmpty() ? parameter.getName() : queryParam.value();
-          String value = ctx.request().getParam(name);
-
-          if (value == null && queryParam.required()) {
-            throw new ValidationException(String.format("查询参数 %s 不能为空", name));
+        result = switch (annotation) {
+          case PathParam pathParam -> {
+            String name = pathParam.value().isEmpty() ? parameter.getName() : pathParam.value();
+            String value = ctx.pathParam(name);
+            yield convertValue(value, paramType);
           }
 
-          yield convertValue(value, paramType);
-        }
+          case QueryParam queryParam -> {
+            String name = queryParam.value().isEmpty() ? parameter.getName() : queryParam.value();
+            String value = ctx.request().getParam(name);
 
-        case RequestBody ignored -> {
-          try {
-            Object body = ctx.body().asJsonObject().mapTo(paramType);
-            if (body == null) {
-              throw new ValidationException("请求体不能为空");
+            if (value == null && queryParam.required()) {
+              throw new ValidationException(String.format("查询参数 %s 不能为空", name));
             }
 
-            boolean needValidation = Arrays.stream(annotations)
-                .anyMatch(a -> a instanceof Valid);
+            yield convertValue(value, paramType);
+          }
 
-            if (needValidation) {
-              ValidationUtils.validate(body);
+          case RequestBody ignored -> {
+            try {
+              Object body = ctx.body().asJsonObject().mapTo(paramType);
+              if (body == null) {
+                throw new ValidationException("请求体不能为空");
+              }
+
+              // 只在RequestBody注解上判断是否需要校验
+              boolean needValidation = Arrays.stream(annotations)
+                  .anyMatch(a -> a instanceof Valid);
+
+              if (needValidation) {
+                ValidationUtils.validate(body);
+              }
+
+              yield body;
+            } catch (DecodeException e) {
+              throw new ValidationException("请求体解析失败: " + e.getMessage());
+            }
+          }
+
+          case HeaderParam headerParam -> {
+            String name = headerParam.value().isEmpty() ? parameter.getName() : headerParam.value();
+            String value = ctx.request().getHeader(name);
+
+            if (value == null && headerParam.required()) {
+              throw new ValidationException(String.format("请求头 %s 不能为空", name));
             }
 
-            yield body;
-          } catch (DecodeException e) {
-            throw new ValidationException("请求体解析失败: " + e.getMessage());
-          }
-        }
-
-        case HeaderParam headerParam -> {
-          String name = headerParam.value().isEmpty() ? parameter.getName() : headerParam.value();
-          String value = ctx.request().getHeader(name);
-
-          if (value == null && headerParam.required()) {
-            throw new ValidationException(String.format("请求头 %s 不能为空", name));
+            yield convertValue(value, paramType);
           }
 
-          yield convertValue(value, paramType);
-        }
+          default -> null;
+        };
 
-        default -> null;
-      };
+        break; // 找到主参数注解后跳出
+      }
     }
 
-    return null;
+    return result;
   }
 
   /**
