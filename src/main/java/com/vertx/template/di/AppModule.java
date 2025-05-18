@@ -4,6 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.vertx.template.controller.UserController;
+import com.vertx.template.handler.ResponseHandler;
 import com.vertx.template.router.GlobalMiddleware;
 import com.vertx.template.routes.UserRoutes;
 import com.vertx.template.service.UserService;
@@ -35,6 +36,9 @@ public class AppModule extends AbstractModule {
 
     // 中间件绑定
     bind(GlobalMiddleware.class).in(Singleton.class);
+
+    // 响应处理器绑定
+    bind(ResponseHandler.class).in(Singleton.class);
 
     // 绑定Vertx和Config
     bind(Vertx.class).toInstance(vertx);
