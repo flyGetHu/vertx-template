@@ -1,0 +1,23 @@
+# 服务器配置
+server:
+  port: 8888
+  host: localhost
+
+# 日志配置
+logging:
+  enabled: true
+  request_log: true
+  level: INFO
+
+# CORS配置
+cors:
+  enabled: true
+  allowed_origins: "*"
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+  allowed_headers:
+    - Content-Type
+    - Authorization

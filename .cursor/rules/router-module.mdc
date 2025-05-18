@@ -1,0 +1,62 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 路由模块设计指南
+
+本项目采用模块化路由设计，将路由组织为可组合的独立模块。
+
+## 核心概念
+
+### 1. RouteGroup接口
+
+所有路由模块都实现[RouteGroup接口](mdc:src/main/java/com/vertx/template/router/RouteGroup.java)，提供统一的注册方法：
+
+```java
+public interface RouteGroup {
+    void register(Router router);
+}
+```
+
+### 2. 路由注册中心
+
+[RouterRegistry](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java)负责集中管理所有路由模块：
+
+- 初始化和存储所有RouteGroup实例
+- 按照特定顺序注册中间件、业务路由和异常处理
+- 提供统一的Router实例给HTTP服务器
+
+### 3. 全局中间件
+
+[GlobalMiddleware](mdc:src/main/java/com/vertx/template/router/GlobalMiddleware.java)负责处理通用中间件：
+
+- CORS配置
+- 请求体解析
+- 请求日志和计时
+- 其他全局处理逻辑
+
+## 实现示例
+
+[UserRoutes](mdc:src/main/java/com/vertx/template/routes/UserRoutes.java)展示了路由模块的标准实现：
+
+```java
+public class UserRoutes implements RouteGroup {
+    // ... 字段和构造函数 ...
+
+    @Override
+    public void register(Router router) {
+        // 在这里注册特定于此模块的所有路由
+        router.get("/api/users").handler(controller.getUsers());
+        router.get("/api/users/:id").handler(controller.getUserById());
+    }
+}
+```
+
+## 添加新路由模块
+
+添加新路由模块的步骤：
+
+1. 创建新的XXXRoutes类，实现RouteGroup接口
+2. 在RouterRegistry.initRouteGroups()方法中添加该路由模块实例
+3. 新模块会自动集成到路由系统中
