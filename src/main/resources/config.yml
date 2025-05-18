@@ -21,3 +21,16 @@ cors:
   allowed_headers:
     - Content-Type
     - Authorization
+
+# 数据库配置
+database:
+  type: mysql
+  host: localhost
+  port: 3306
+  database: vertx_demo
+  username: root
+  password: root
+  max_pool_size: 5
+  idle_timeout: 30000
+  connect_timeout: 10000
+  query_timeout: 10000

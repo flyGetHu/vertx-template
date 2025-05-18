@@ -2,13 +2,15 @@ package com.vertx.template.di;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import javax.inject.Singleton;
+import com.google.inject.Singleton;
+import com.vertx.template.repository.UserRepository;
+import com.vertx.template.repository.impl.UserRepositoryImpl;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
 /**
- * Guice依赖注入模块
+ * 依赖注入模块，配置应用程序的依赖关系
  */
 public class AppModule extends AbstractModule {
   private final Vertx vertx;
@@ -21,9 +23,22 @@ public class AppModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    // 只绑定无法通过注解自动注入的实例
-    bind(Vertx.class).toInstance(vertx);
-    bind(JsonObject.class).toInstance(config);
+    // 绑定接口到实现类
+    bind(UserRepository.class).to(UserRepositoryImpl.class);
+
+    // 其他绑定配置
+  }
+
+  @Provides
+  @Singleton
+  Vertx provideVertx() {
+    return vertx;
+  }
+
+  @Provides
+  @Singleton
+  JsonObject provideConfig() {
+    return config;
   }
 
   @Provides

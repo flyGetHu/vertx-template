@@ -116,6 +116,12 @@ public class AnnotationRouterHandler {
       Route route = router.post(path);
       registerHandler(route, controller, method);
       logger.debug("注册POST路由: {}", path);
+    } else if (method.isAnnotationPresent(PutMapping.class)) {
+      PutMapping mapping = method.getAnnotation(PutMapping.class);
+      String path = combinePath(basePath, mapping.value());
+      Route route = router.put(path);
+      registerHandler(route, controller, method);
+      logger.debug("注册PUT路由: {}", path);
     } else if (method.isAnnotationPresent(RequestMapping.class)) {
       RequestMapping mapping = method.getAnnotation(RequestMapping.class);
       String path = combinePath(basePath, mapping.value());
