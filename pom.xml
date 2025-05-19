@@ -258,7 +258,9 @@
           <printFailingErrors>true</printFailingErrors>
           <failOnViolation>true</failOnViolation>
           <printRuleViolations>true</printRuleViolations>
+          <!-- 规则集顺序：先阿里巴巴，再补充官方推荐，确保规范优先且覆盖全面 -->
           <rulesets>
+            <!-- 优先使用阿里巴巴 P3C 规则集 -->
             <ruleset>rulesets/java/ali-comment.xml</ruleset>
             <ruleset>rulesets/java/ali-concurrent.xml</ruleset>
             <ruleset>rulesets/java/ali-constant.xml</ruleset>
@@ -269,6 +271,15 @@
             <ruleset>rulesets/java/ali-orm.xml</ruleset>
             <ruleset>rulesets/java/ali-other.xml</ruleset>
             <ruleset>rulesets/java/ali-set.xml</ruleset>
+            <!-- 补充 PMD 官方推荐常用规则集，提升覆盖面 -->
+            <ruleset>category/java/bestpractices.xml</ruleset>
+            <ruleset>category/java/codestyle.xml</ruleset>
+            <ruleset>category/java/design.xml</ruleset>
+            <ruleset>category/java/errorprone.xml</ruleset>
+            <ruleset>category/java/performance.xml</ruleset>
+            <ruleset>category/java/documentation.xml</ruleset>
+            <ruleset>category/java/multithreading.xml</ruleset>
+            <ruleset>category/java/security.xml</ruleset>
           </rulesets>
         </configuration>
         <dependencies>
