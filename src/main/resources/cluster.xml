@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hazelcast xmlns="http://www.hazelcast.com/schema/config"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.hazelcast.com/schema/config
+           http://www.hazelcast.com/schema/config/hazelcast-config-5.0.xsd">
+
+  <!-- 集群名称，同一集群内必须使用相同名称 -->
+  <cluster-name>vertx-cluster</cluster-name>
+
+  <!-- 成员属性配置 -->
+  <member-attributes>
+    <attribute name="__vertx.nodeId">unique-identifier</attribute>
+  </member-attributes>
+
+  <!-- 多播集群发现设置（默认使用多播） -->
+  <network>
+    <port auto-increment="true" port-count="10000">5701</port>
+    <outbound-ports>
+      <ports>0</ports>
+    </outbound-ports>
+    <join>
+      <auto-detection enabled="true"/>
+      <multicast enabled="true">
+        <multicast-group>224.2.2.3</multicast-group>
+        <multicast-port>54327</multicast-port>
+        <multicast-time-to-live>32</multicast-time-to-live>
+        <multicast-timeout-seconds>2</multicast-timeout-seconds>
+      </multicast>
+      <tcp-ip enabled="false">
+        <member>localhost</member>
+      </tcp-ip>
+    </join>
+    <symmetric-encryption enabled="false">
+      <algorithm>AES/CBC/PKCS5Padding</algorithm>
+    </symmetric-encryption>
+  </network>
+
+  <!-- 分布式多图映射配置 -->
+  <multimap name="__vertx.subs">
+    <backup-count>1</backup-count>
+    <value-collection-type>SET</value-collection-type>
+  </multimap>
+
+  <!-- 高可用性信息映射配置 -->
+  <map name="__vertx.haInfo">
+    <backup-count>1</backup-count>
+  </map>
+
+  <!-- 节点信息映射配置 -->
+  <map name="__vertx.nodeInfo">
+    <backup-count>1</backup-count>
+  </map>
+
+  <!-- 普通映射配置 -->
+  <map name="default">
+    <backup-count>1</backup-count>
+  </map>
+
+  <!-- 事件总线对象映射配置 -->
+  <serialization>
+    <portable-factories>
+      <portable-factory factory-id="1">
+        io.vertx.core.eventbus.impl.codecs.ClusterSerializablePortableFactory
+      </portable-factory>
+    </portable-factories>
+  </serialization>
+
+</hazelcast>

@@ -8,6 +8,10 @@ logging:
   enabled: true
   request_log: true
   level: INFO
+  file:
+    enabled: true
+    directory: logs
+    filename: vertx-app.log
 
 # CORS配置
 cors:
@@ -33,5 +37,5 @@ database:
   max_pool_size: 5
   idle_timeout: 30000
   connect_timeout: 10000
-  max_lifetime:  60000
-  max_wait_queue_size:  100
+  max_lifetime: 60000
+  max_wait_queue_size: 100

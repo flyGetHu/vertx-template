@@ -1,11 +1,107 @@
-# Vert.x 项目模板
+# Vert.x模板项目
 
-一个基于Vert.x的响应式应用程序模板，提供了完整的项目结构和常用功能实现。
+这是一个基于Vert.x框架的模板项目，支持单机模式和集群模式运行。
+
+## 特性
+
+- 基于Vert.x 4.5.14构建
+- 支持Hazelcast集群管理
+- 采用响应式编程模型
+- 使用Logback进行日志记录（支持文件日志和日志切割）
+- 依赖注入支持（Guice）
+- 自动化路由注册
+- YAML配置文件支持
+
+## 项目结构
+
+```
+src/
+├── main/
+│   ├── java/
+│   │   └── com/vertx/template/
+│   │       ├── config/           # 配置类
+│   │       ├── controller/       # 控制器
+│   │       ├── di/              # 依赖注入
+│   │       ├── exception/        # 异常处理
+│   │       ├── handler/          # 请求处理器
+│   │       ├── model/            # 数据模型
+│   │       ├── repository/       # 数据访问层
+│   │       ├── router/           # 路由相关
+│   │       ├── service/          # 业务逻辑层
+│   │       ├── MainVerticle.java # 主Verticle
+│   │       └── Run.java          # 应用入口
+│   └── resources/
+│       ├── cluster.xml          # Hazelcast集群配置
+│       ├── config.yml           # 应用配置
+│       └── logback.xml          # 日志配置
+└── test/                        # 测试代码
+```
+
+## 构建和运行
+
+### 前提条件
+
+- JDK 21
+- Maven 3.8+
+
+### 构建项目
+
+```bash
+mvn clean package
+```
+
+### 运行方式
+
+#### 单机模式
+
+```bash
+# 使用脚本启动
+./start-standalone.sh
+
+# 或者手动启动
+java -jar target/template-1.0.0-SNAPSHOT-fat.jar
+```
+
+#### 集群模式
+
+```bash
+# 使用脚本启动
+./start-cluster.sh
+
+# 或者手动启动
+java -Dcluster=true -jar target/template-1.0.0-SNAPSHOT-fat.jar
+```
+
+## 集群配置
+
+项目使用Hazelcast作为集群管理器，配置文件位于`src/main/resources/cluster.xml`。
+
+集群配置在`config.yml`中：
+
+```yaml
+cluster:
+  enabled: true  # 是否启用集群模式
+  type: hazelcast # 集群类型
+  config_file: cluster.xml # 集群配置文件
+```
+
+## 日志配置
+
+项目使用Logback作为日志框架，配置文件位于`src/main/resources/logback.xml`。日志文件保存在`logs`目录中，支持以下特性：
+
+- 控制台和文件双重输出
+- 基于大小和时间的日志切割
+- 自定义日志级别
+- 日志文件总大小限制
+
+## 注意事项
+
+- 多播可能在某些环境中不可用，如果遇到集群问题，请修改Hazelcast配置使用TCP-IP或其他发现方式
+- 在生产环境中使用前，请适当调整JVM参数和日志配置
 
 ## 项目特性
 
 - 基于注解的路由定义，类似Spring MVC
-- 依赖注入支持 (Guice)
 - 参数校验 (Jakarta Bean Validation)
 - 统一异常处理
 - 响应式数据库访问 (MySQL)
@@ -34,46 +130,6 @@ mysql -u root -p vertx_demo < src/main/resources/db/init.sql
 ### 配置项目
 
 1. 编辑 `src/main/resources/config.yml` 文件，修改数据库连接信息
-
-### 构建与运行
-
-```bash
-# 构建项目
-mvn clean package
-
-# 运行应用
-java -jar target/template-1.0.0-SNAPSHOT-fat.jar
-
-# 或使用Maven直接运行
-mvn exec:java
-```
-
-## 项目结构
-
-```
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/vertx/template/
-│   │   │       ├── config/         # 配置类
-│   │   │       ├── controller/     # 控制器
-│   │   │       ├── di/            # 依赖注入
-│   │   │       ├── exception/      # 异常类
-│   │   │       ├── handler/        # 处理器
-│   │   │       ├── model/          # 数据模型
-│   │   │       │   └── entity/     # 实体类
-│   │   │       ├── repository/     # 数据仓库
-│   │   │       │   └── impl/       # 仓库实现
-│   │   │       ├── router/         # 路由
-│   │   │       ├── service/        # 服务层
-│   │   │       ├── MainVerticle.java
-│   │   │       └── Run.java
-│   │   └── resources/
-│   │       ├── db/                 # 数据库脚本
-│   │       ├── config.yml          # 配置文件
-│   │       └── logback.xml         # 日志配置
-└── pom.xml
-```
 
 ## 数据库访问示例
 

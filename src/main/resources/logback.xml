@@ -1,10 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+  <!-- 控制台日志输出 -->
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder charset="UTF-8">
       <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
+
+  <!-- 文件日志输出 -->
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/vertx-app.log</file>
+    <encoder charset="UTF-8">
+      <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+    <!-- 日志文件切割策略 -->
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- 日志文件名格式 -->
+      <fileNamePattern>logs/vertx-app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+      <!-- 单个日志文件最大大小 -->
+      <maxFileSize>100MB</maxFileSize>
+      <!-- 保留天数 -->
+      <maxHistory>30</maxHistory>
+      <!-- 所有日志文件的总大小限制 -->
+      <totalSizeCap>3GB</totalSizeCap>
+    </rollingPolicy>
+  </appender>
+
+  <!-- Hazelcast日志级别设置 -->
+  <logger name="com.hazelcast" level="INFO"/>
+
+  <!-- Vertx日志级别设置 -->
+  <logger name="io.vertx" level="INFO"/>
+
+  <!-- 应用日志级别设置 -->
+  <logger name="com.vertx.template" level="DEBUG"/>
+
+  <!-- 根日志级别 -->
   <root level="INFO">
     <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
   </root>
 </configuration>

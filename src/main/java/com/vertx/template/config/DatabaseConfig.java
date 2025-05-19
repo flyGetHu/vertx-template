@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Pool;
 import io.vertx.mysqlclient.MySQLConnectOptions;
 import io.vertx.sqlclient.PoolOptions;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +20,13 @@ public class DatabaseConfig {
   private static final Logger logger = LoggerFactory.getLogger(DatabaseConfig.class);
   private final Vertx vertx;
   private final JsonObject config;
+  /**
+   * -- GETTER --
+   *  获取数据库连接池
+   *
+   * @return 通用SQL客户端连接池
+   */
+  @Getter
   private Pool pool;
 
   @Inject
@@ -63,15 +71,6 @@ public class DatabaseConfig {
     } catch (Exception e) {
       logger.error("数据库初始化失败", e);
     }
-  }
-
-  /**
-   * 获取数据库连接池
-   *
-   * @return 通用SQL客户端连接池
-   */
-  public Pool getPool() {
-    return pool;
   }
 
   /**
