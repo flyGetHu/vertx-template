@@ -27,6 +27,7 @@ public class UserController {
   @Inject
   public UserController(UserRepository userRepository) {
     this.userRepository = userRepository;
+    logger.info("UserController initialized");
     logger.info("UserController initialized with repository: {}", userRepository.getClass().getName());
   }
 
