@@ -1,4 +1,4 @@
-package com.vertx.template;
+package com.vertx.template.verticle;
 
 import com.vertx.template.config.ConfigLoader;
 import com.vertx.template.router.RouterRegistry;
