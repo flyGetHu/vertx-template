@@ -1,7 +1,7 @@
 package com.vertx.template.handler;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.model.ApiResponse;
 import io.vertx.core.Handler;
@@ -18,7 +18,8 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @Inject
-  public GlobalExceptionHandler() {}
+  public GlobalExceptionHandler() {
+  }
 
   @Override
   public void handle(RoutingContext ctx) {
