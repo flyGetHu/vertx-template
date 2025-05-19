@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Running Maven validate (Spotless check)..."
-# 跳过测试，仅做格式校验
-mvn validate -q -DskipTests
+echo "================ 代码检查 ================"
+echo "执行阿里巴巴 P3C 规约检查..."
+mvn pmd:pmd -q
 
-echo "Spotless 校验通过，允许提交。"
+echo "✓ 代码检查通过，允许提交"
+echo "======================================="

@@ -196,25 +196,62 @@
           </arguments>
         </configuration>
       </plugin>
-      <!-- 添加 Spotless 插件，用于格式化代码并移除未使用的导入 -->
+      <!-- 集成常见质量检查插件 -->
       <plugin>
-        <groupId>com.diffplug.spotless</groupId>
-        <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.32.4</version>
-        <configuration>
-          <java>
-            <googleJavaFormat />
-            <removeUnusedImports />
-          </java>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[21,22)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.alibaba.p3c</groupId>
+        <artifactId>p3c-pmd</artifactId>
+        <version>2.1.1</version>
         <executions>
           <execution>
             <phase>validate</phase>
             <goals>
-              <goal>check</goal>
+              <goal>pmd</goal>
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <printRuleViolations>true</printRuleViolations>
+          <rulesets>
+            <ruleset>rulesets/java/ali-comment.xml</ruleset>
+            <ruleset>rulesets/java/ali-concurrent.xml</ruleset>
+            <ruleset>rulesets/java/ali-constant.xml</ruleset>
+            <ruleset>rulesets/java/ali-exception.xml</ruleset>
+            <ruleset>rulesets/java/ali-flowcontrol.xml</ruleset>
+            <ruleset>rulesets/java/ali-naming.xml</ruleset>
+            <ruleset>rulesets/java/ali-oop.xml</ruleset>
+            <ruleset>rulesets/java/ali-orm.xml</ruleset>
+            <ruleset>rulesets/java/ali-other.xml</ruleset>
+            <ruleset>rulesets/java/ali-set.xml</ruleset>
+          </rulesets>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.alibaba.p3c</groupId>
+            <artifactId>p3c-pmd</artifactId>
+            <version>2.1.1</version>
+          </dependency>
+        </dependencies>
       </plugin>
     </plugins>
   </build>

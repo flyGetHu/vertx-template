@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+msg=$(cat "$1")
+
+# 允许空提交信息
+if [ -z "$msg" ]; then
+  echo "✓ 允许空提交信息"
+  exit 0
+fi
+
+# 支持更宽松的格式：允许不带括号的范围，冒号后不要求空格
+if ! echo "$msg" | grep -E '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert|merge|release|optimize)(\([^)]+\))?:( )?.*'; then
+  echo "================ 提交信息格式错误 ================"
+  echo "提交信息必须遵循以下格式："
+  echo "  类型(可选范围): 描述"
+  echo "  或简化格式："
+  echo "  类型: 描述"
+  echo ""
+  echo "支持的类型："
+  echo "  feat     - 新功能"
+  echo "  fix      - 修复Bug"
+  echo "  docs     - 文档变更"
+  echo "  style    - 代码风格、格式调整"
+  echo "  refactor - 代码重构"
+  echo "  test     - 添加/修改测试"
+  echo "  chore    - 构建过程或辅助工具变动"
+  echo "  perf     - 性能优化"
+  echo "  ci       - CI/CD配置变更"
+  echo "  build    - 构建系统变更"
+  echo "  revert   - 回退提交"
+  echo "  merge    - 分支合并"
+  echo "  release  - 发布版本"
+  echo "  optimize - 功能优化"
+  echo "==============================================="
+  exit 1
+fi
+
+echo "✓ 提交信息格式正确"
