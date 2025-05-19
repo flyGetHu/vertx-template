@@ -183,3 +183,8 @@ nbdist/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# log
+log/
+logs/
+*.log
