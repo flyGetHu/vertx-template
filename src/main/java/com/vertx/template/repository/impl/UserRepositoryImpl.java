@@ -38,8 +38,7 @@ public class UserRepositoryImpl implements UserRepository {
   public List<User> findAll() {
     final String sql = "SELECT * FROM users";
 
-    final RowSet<Row> rows = Future.await(pool.query(sql)
-        .execute());
+    final RowSet<Row> rows = Future.await(pool.query(sql).execute());
 
     final List<User> users = new ArrayList<>();
     for (Row row : rows) {
@@ -52,8 +51,7 @@ public class UserRepositoryImpl implements UserRepository {
   public User findById(Long id) {
     final String sql = "SELECT * FROM users WHERE id = ?";
 
-    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(id)));
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(id)));
 
     return rows.size() > 0 ? User.fromRow(rows.iterator().next()) : null;
   }
@@ -68,17 +66,10 @@ public class UserRepositoryImpl implements UserRepository {
     final String sql = "INSERT INTO users (username, password, email, created_at, updated_at, active) "
         + "VALUES (?, ?, ?, ?, ?, ?)";
 
-    Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(
-            user.getUsername(),
-            user.getPassword(),
-            user.getEmail(),
-            user.getCreatedAt(),
-            user.getUpdatedAt(),
-            user.isActive())));
+    Future.await(pool.preparedQuery(sql).execute(Tuple.of(user.getUsername(), user.getPassword(), user.getEmail(),
+        user.getCreatedAt(), user.getUpdatedAt(), user.isActive())));
     // 通过查询获取最后插入的ID
-    final RowSet<Row> idResult = Future.await(pool.query("SELECT LAST_INSERT_ID()")
-        .execute());
+    final RowSet<Row> idResult = Future.await(pool.query("SELECT LAST_INSERT_ID()").execute());
 
     if (idResult.size() > 0) {
       final Long id = idResult.iterator().next().getLong(0);
@@ -98,12 +89,7 @@ public class UserRepositoryImpl implements UserRepository {
     final String sql = "UPDATE users SET username = ?, email = ?, active = ?, updated_at = ? WHERE id = ?";
 
     final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(
-            user.getUsername(),
-            user.getEmail(),
-            user.isActive(),
-            user.getUpdatedAt(),
-            id)));
+        .execute(Tuple.of(user.getUsername(), user.getEmail(), user.isActive(), user.getUpdatedAt(), id)));
 
     return rows.size() > 0 ? user : null;
   }
@@ -112,8 +98,7 @@ public class UserRepositoryImpl implements UserRepository {
   public Boolean deleteById(Long id) {
     final String sql = "DELETE FROM users WHERE id = ?";
 
-    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(id)));
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(id)));
 
     return rows.size() > 0;
   }
@@ -122,8 +107,7 @@ public class UserRepositoryImpl implements UserRepository {
   public User findByUsername(String username) {
     final String sql = "SELECT * FROM users WHERE username = ?";
 
-    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(username)));
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(username)));
 
     return rows.size() > 0 ? User.fromRow(rows.iterator().next()) : null;
   }
@@ -132,8 +116,7 @@ public class UserRepositoryImpl implements UserRepository {
   public User findByEmail(String email) {
     final String sql = "SELECT * FROM users WHERE email = ?";
 
-    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(email)));
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(email)));
 
     return rows.size() > 0 ? User.fromRow(rows.iterator().next()) : null;
   }
@@ -142,8 +125,7 @@ public class UserRepositoryImpl implements UserRepository {
   public List<User> findActiveUsers() {
     final String sql = "SELECT * FROM users WHERE active = true";
 
-    final RowSet<Row> rows = Future.await(pool.query(sql)
-        .execute());
+    final RowSet<Row> rows = Future.await(pool.query(sql).execute());
 
     final List<User> users = new ArrayList<>();
     for (Row row : rows) {
@@ -158,8 +140,8 @@ public class UserRepositoryImpl implements UserRepository {
 
     final String sql = "UPDATE users SET password = ?, updated_at = ? WHERE id = ?";
 
-    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql)
-        .execute(Tuple.of(newPassword, LocalDateTime.now(), id)));
+    final RowSet<Row> rows = Future
+        .await(pool.preparedQuery(sql).execute(Tuple.of(newPassword, LocalDateTime.now(), id)));
 
     return rows.size() > 0;
   }

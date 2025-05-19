@@ -22,8 +22,7 @@ public class Product {
 
   private String description;
 
-  public Product() {
-  }
+  public Product() {}
 
   public Product(String id, String name, Double price, String description) {
     this.id = id;

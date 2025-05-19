@@ -26,16 +26,15 @@ public class CodeStyleExample {
   /**
    * 构造函数实践
    *
-   * @param config 配置对象
+   * @param config
+   *          配置对象
    */
   public CodeStyleExample(final JsonObject config) {
     // 局部变量默认使用final
     final String configType = config.getString("type", DEFAULT_TYPE);
 
     // 使用不可变集合
-    this.immutableConfig = Map.of(
-        "type", configType,
-        "created", System.currentTimeMillis());
+    this.immutableConfig = Map.of("type", configType, "created", System.currentTimeMillis());
 
     // 需要修改的集合不使用final
     this.mutableState = new ConcurrentHashMap<>();
@@ -44,7 +43,8 @@ public class CodeStyleExample {
   /**
    * 同步方法示例
    *
-   * @param id 对象ID
+   * @param id
+   *          对象ID
    * @return 处理结果
    */
   public String processData(final String id) {
@@ -52,10 +52,7 @@ public class CodeStyleExample {
     final StringBuilder result = new StringBuilder();
 
     // 方法链式调用
-    result.append("Processing: ")
-        .append(id)
-        .append(" with type: ")
-        .append(immutableConfig.get("type"));
+    result.append("Processing: ").append(id).append(" with type: ").append(immutableConfig.get("type"));
 
     return result.toString();
   }
@@ -63,7 +60,8 @@ public class CodeStyleExample {
   /**
    * 异步方法示例，使用Future
    *
-   * @param userId 用户ID
+   * @param userId
+   *          用户ID
    * @return 处理结果的Future
    */
   public Future<List<String>> fetchUserItems(final String userId) {
@@ -84,26 +82,24 @@ public class CodeStyleExample {
   /**
    * Future组合示例
    *
-   * @param userId 用户ID
+   * @param userId
+   *          用户ID
    * @return 处理结果Future
    */
   public Future<Map<String, Object>> processUserData(final String userId) {
-    return fetchUserItems(userId)
-        .map(items -> {
-          // 在map转换中使用final变量
-          final Map<String, Object> result = new HashMap<>();
-          result.put("userId", userId);
-          result.put("items", items);
-          result.put("count", items.size());
-          return result;
-        })
-        .onSuccess(result -> {
-          // 处理成功回调
-          this.mutableState.put(userId, result);
-        })
-        .onFailure(err -> {
-          // 异常处理
-          System.err.println("处理失败: " + err.getMessage());
-        });
+    return fetchUserItems(userId).map(items -> {
+      // 在map转换中使用final变量
+      final Map<String, Object> result = new HashMap<>();
+      result.put("userId", userId);
+      result.put("items", items);
+      result.put("count", items.size());
+      return result;
+    }).onSuccess(result -> {
+      // 处理成功回调
+      this.mutableState.put(userId, result);
+    }).onFailure(err -> {
+      // 异常处理
+      System.err.println("处理失败: " + err.getMessage());
+    });
   }
 }

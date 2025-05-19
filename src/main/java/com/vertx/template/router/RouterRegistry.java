@@ -28,8 +28,10 @@ public class RouterRegistry {
   /**
    * 构造函数
    *
-   * @param vertx  Vert.x实例
-   * @param config 应用配置
+   * @param vertx
+   *          Vert.x实例
+   * @param config
+   *          应用配置
    */
   public RouterRegistry(Vertx vertx, JsonObject config) {
     this.vertx = vertx;
@@ -85,35 +87,25 @@ public class RouterRegistry {
    */
   private void registerExceptionHandler() {
     mainRouter.errorHandler(404, ctx -> {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(ApiResponse.error(404, "Not Found")));
+      ctx.response().setStatusCode(200).putHeader("content-type", "application/json")
+          .end(Json.encodePrettily(ApiResponse.error(404, "Not Found")));
     });
     mainRouter.errorHandler(405, ctx -> {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(ApiResponse.error(405, "Method Not Allowed")));
+      ctx.response().setStatusCode(200).putHeader("content-type", "application/json")
+          .end(Json.encodePrettily(ApiResponse.error(405, "Method Not Allowed")));
     });
     // 429
     mainRouter.errorHandler(429, ctx -> {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(ApiResponse.error(429, "Too Many Requests")));
+      ctx.response().setStatusCode(200).putHeader("content-type", "application/json")
+          .end(Json.encodePrettily(ApiResponse.error(429, "Too Many Requests")));
     });
     mainRouter.errorHandler(503, ctx -> {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(ApiResponse.error(503, "Service Unavailable")));
+      ctx.response().setStatusCode(200).putHeader("content-type", "application/json")
+          .end(Json.encodePrettily(ApiResponse.error(503, "Service Unavailable")));
     });
     mainRouter.errorHandler(504, ctx -> {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(ApiResponse.error(504, "Gateway Timeout")));
+      ctx.response().setStatusCode(200).putHeader("content-type", "application/json")
+          .end(Json.encodePrettily(ApiResponse.error(504, "Gateway Timeout")));
     });
     mainRouter.route().failureHandler(ctx -> {
       ApiResponse<?> response;
@@ -122,10 +114,8 @@ public class RouterRegistry {
       } else {
         response = ApiResponse.error(500, ctx.failure() != null ? ctx.failure().getMessage() : "Internal Server Error");
       }
-      ctx.response()
-        .setStatusCode(200) // 强制HTTP状态码为200
-        .putHeader("content-type", "application/json")
-        .end(Json.encodePrettily(response));
+      ctx.response().setStatusCode(200) // 强制HTTP状态码为200
+          .putHeader("content-type", "application/json").end(Json.encodePrettily(response));
     });
 
     logger.debug("全局异常处理器配置完成");

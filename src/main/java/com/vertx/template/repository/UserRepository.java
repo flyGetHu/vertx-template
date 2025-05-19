@@ -13,7 +13,8 @@ public interface UserRepository extends BaseRepository<User, Long> {
   /**
    * 根据用户名查找用户
    *
-   * @param username 用户名
+   * @param username
+   *          用户名
    * @return 用户对象Future
    */
   User findByUsername(String username);
@@ -21,7 +22,8 @@ public interface UserRepository extends BaseRepository<User, Long> {
   /**
    * 根据邮箱查找用户
    *
-   * @param email 邮箱
+   * @param email
+   *          邮箱
    * @return 用户对象Future
    */
   User findByEmail(String email);
@@ -36,8 +38,10 @@ public interface UserRepository extends BaseRepository<User, Long> {
   /**
    * 更新用户密码
    *
-   * @param id          用户ID
-   * @param newPassword 新密码
+   * @param id
+   *          用户ID
+   * @param newPassword
+   *          新密码
    * @return 操作结果Future
    */
   Boolean updatePassword(Long id, String newPassword);

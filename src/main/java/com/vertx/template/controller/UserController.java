@@ -34,8 +34,7 @@ public class UserController {
    * 获取所有用户
    */
   @GetMapping("")
-  public List<User> getAllUsers(
-      @QueryParam(value = "active", required = false) Boolean activeOnly) {
+  public List<User> getAllUsers(@QueryParam(value = "active", required = false) Boolean activeOnly) {
 
     if (Boolean.TRUE.equals(activeOnly)) {
       logger.debug("查询活跃用户");
@@ -68,9 +67,7 @@ public class UserController {
    * 更新用户
    */
   @PutMapping("/:id")
-  public User updateUser(
-      @PathParam("id") Long id,
-      @Valid @RequestBody User user) {
+  public User updateUser(@PathParam("id") Long id, @Valid @RequestBody User user) {
 
     logger.debug("更新用户: {}", id);
     return userRepository.update(id, user);

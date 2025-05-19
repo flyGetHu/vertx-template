@@ -48,7 +48,8 @@ public class AnnotationRouterHandler {
   /**
    * 注册所有带有路由注解的控制器方法
    *
-   * @param router 路由器
+   * @param router
+   *          路由器
    */
   public void registerRoutes(Router router) {
     try {
@@ -68,8 +69,10 @@ public class AnnotationRouterHandler {
   /**
    * 注册单个控制器类中的所有路由方法
    *
-   * @param router          路由器
-   * @param controllerClass 控制器类
+   * @param router
+   *          路由器
+   * @param controllerClass
+   *          控制器类
    */
   private void registerController(Router router, Class<?> controllerClass) {
     try {
@@ -97,10 +100,14 @@ public class AnnotationRouterHandler {
   /**
    * 处理控制器方法，注册对应的路由
    *
-   * @param router     路由器
-   * @param controller 控制器实例
-   * @param method     控制器方法
-   * @param basePath   基础路径
+   * @param router
+   *          路由器
+   * @param controller
+   *          控制器实例
+   * @param method
+   *          控制器方法
+   * @param basePath
+   *          基础路径
    */
   private void processMethod(Router router, Object controller, Method method, String basePath) {
     // 处理各种HTTP方法注解
@@ -247,10 +254,8 @@ public class AnnotationRouterHandler {
 
     // 先找到主要参数注解（PathParam、QueryParam等）
     for (Annotation annotation : annotations) {
-      if (annotation instanceof PathParam ||
-          annotation instanceof QueryParam ||
-          annotation instanceof RequestBody ||
-          annotation instanceof HeaderParam) {
+      if (annotation instanceof PathParam || annotation instanceof QueryParam || annotation instanceof RequestBody
+          || annotation instanceof HeaderParam) {
 
         result = switch (annotation) {
           case PathParam pathParam -> {
@@ -278,8 +283,7 @@ public class AnnotationRouterHandler {
               }
 
               // 只在RequestBody注解上判断是否需要校验
-              boolean needValidation = Arrays.stream(annotations)
-                  .anyMatch(a -> a instanceof Valid);
+              boolean needValidation = Arrays.stream(annotations).anyMatch(a -> a instanceof Valid);
 
               if (needValidation) {
                 ValidationUtils.validate(body);

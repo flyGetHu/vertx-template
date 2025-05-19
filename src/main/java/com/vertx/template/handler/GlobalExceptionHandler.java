@@ -18,8 +18,7 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @Inject
-  public GlobalExceptionHandler() {
-  }
+  public GlobalExceptionHandler() {}
 
   @Override
   public void handle(RoutingContext ctx) {
@@ -39,10 +38,8 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
       }
 
       // 发送响应
-      ctx.response()
-          .setStatusCode(200) // 统一使用200状态码，通过业务code区分错误
-          .putHeader("content-type", "application/json")
-          .end(Json.encodePrettily(response));
+      ctx.response().setStatusCode(200) // 统一使用200状态码，通过业务code区分错误
+          .putHeader("content-type", "application/json").end(Json.encodePrettily(response));
     } else {
       // 没有异常，继续处理
       ctx.next();

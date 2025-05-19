@@ -25,8 +25,7 @@ public class Run {
   public static void main(String[] args) {
     try {
       // 设置VertxOptions，启用虚拟线程
-      VertxOptions options = new VertxOptions()
-          .setPreferNativeTransport(true) // 优先使用本地传输
+      VertxOptions options = new VertxOptions().setPreferNativeTransport(true) // 优先使用本地传输
           .setEventLoopPoolSize(2 * Runtime.getRuntime().availableProcessors()) // 设置事件循环池大小
           .setWorkerPoolSize(20); // 设置工作线程池大小
 
@@ -38,10 +37,7 @@ public class Run {
         ClusterManager clusterManager = configureCluster(options);
 
         // 创建集群Vertx实例并等待完成
-        Vertx vertx = Future.await(Vertx.builder()
-            .with(options)
-            .withClusterManager(clusterManager)
-            .buildClustered());
+        Vertx vertx = Future.await(Vertx.builder().with(options).withClusterManager(clusterManager).buildClustered());
 
         // 部署MainVerticle
         Future.await(vertx.deployVerticle(new MainVerticle(),

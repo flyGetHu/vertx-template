@@ -18,14 +18,15 @@ import java.util.function.Function;
 public class ResponseHandler {
 
   @Inject
-  public ResponseHandler() {
-  }
+  public ResponseHandler() {}
 
   /**
    * 创建一个Handler，自动处理响应和异常
    *
-   * @param handler 业务处理函数，直接返回业务数据对象
-   * @param <T>     返回数据类型
+   * @param handler
+   *          业务处理函数，直接返回业务数据对象
+   * @param <T>
+   *          返回数据类型
    * @return Vert.x Handler
    */
   public <T> Handler<RoutingContext> handle(Function<RoutingContext, T> handler) {
@@ -58,10 +59,7 @@ public class ResponseHandler {
    * 发送响应
    */
   private void sendResponse(RoutingContext ctx, Object response) {
-    ctx.response()
-        .putHeader("content-type", "application/json")
-        .setStatusCode(200)
-        .end(Json.encodePrettily(response));
+    ctx.response().putHeader("content-type", "application/json").setStatusCode(200).end(Json.encodePrettily(response));
   }
 
   /**

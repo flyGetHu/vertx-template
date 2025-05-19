@@ -28,9 +28,12 @@ public class GlobalMiddleware {
   /**
    * 构造函数
    *
-   * @param vertx  Vert.x实例
-   * @param router 路由器实例
-   * @param config 配置
+   * @param vertx
+   *          Vert.x实例
+   * @param router
+   *          路由器实例
+   * @param config
+   *          配置
    */
   @Inject
   public GlobalMiddleware(Vertx vertx, Router router, JsonObject config) {
@@ -66,8 +69,7 @@ public class GlobalMiddleware {
       allowedHeaders.add("Authorization");
     }
 
-    CorsHandler corsHandler = CorsHandler.create()
-        .addOrigin(corsConfig.getString("allowed_origins", "*"));
+    CorsHandler corsHandler = CorsHandler.create().addOrigin(corsConfig.getString("allowed_origins", "*"));
 
     allowedHeaders.forEach(corsHandler::allowedHeader);
 
@@ -75,9 +77,7 @@ public class GlobalMiddleware {
     if (methods != null) {
       methods.forEach(method -> corsHandler.allowedMethod(HttpMethod.valueOf((String) method)));
     } else {
-      corsHandler.allowedMethod(HttpMethod.GET)
-          .allowedMethod(HttpMethod.POST)
-          .allowedMethod(HttpMethod.PUT)
+      corsHandler.allowedMethod(HttpMethod.GET).allowedMethod(HttpMethod.POST).allowedMethod(HttpMethod.PUT)
           .allowedMethod(HttpMethod.DELETE);
     }
 

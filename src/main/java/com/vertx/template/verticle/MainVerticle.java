@@ -44,9 +44,7 @@ public class MainVerticle extends AbstractVerticle {
       Router router = routerRegistry.registerAll();
 
       // 启动HTTP服务器（使用await直接获取结果）
-      Future.await(vertx.createHttpServer()
-          .requestHandler(router)
-          .listen(port, host));
+      Future.await(vertx.createHttpServer().requestHandler(router).listen(port, host));
 
       logger.info("HTTP服务器启动成功 - 监听 {}:{}", host, port);
       promise.complete();

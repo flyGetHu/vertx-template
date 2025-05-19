@@ -43,18 +43,15 @@ public class ProductController {
    * 获取所有产品
    */
   @GetMapping("")
-  public List<Product> getAllProducts(
-      @QueryParam(value = "minPrice", required = false) Double minPrice,
+  public List<Product> getAllProducts(@QueryParam(value = "minPrice", required = false) Double minPrice,
       @QueryParam(value = "maxPrice", required = false) Double maxPrice) {
 
     List<Product> products = new ArrayList<>(productStore.values());
 
     // 如果指定了价格范围，进行过滤
     if (minPrice != null || maxPrice != null) {
-      return products.stream()
-          .filter(p -> minPrice == null || p.getPrice() >= minPrice)
-          .filter(p -> maxPrice == null || p.getPrice() <= maxPrice)
-          .toList();
+      return products.stream().filter(p -> minPrice == null || p.getPrice() >= minPrice)
+          .filter(p -> maxPrice == null || p.getPrice() <= maxPrice).toList();
     }
 
     return products;
@@ -73,8 +70,7 @@ public class ProductController {
   }
 
   /**
-   * 创建新产品
-   * 使用@RequestBody和@Valid注解进行请求体校验
+   * 创建新产品 使用@RequestBody和@Valid注解进行请求体校验
    */
   @PostMapping("")
   public Product createProduct(@Valid @RequestBody Product product) {
@@ -88,20 +84,16 @@ public class ProductController {
   }
 
   /**
-   * 搜索产品
-   * 展示多个查询参数的使用
+   * 搜索产品 展示多个查询参数的使用
    */
   @GetMapping("/search")
-  public List<Product> searchProducts(
-      @QueryParam(value = "name", required = false) String name,
+  public List<Product> searchProducts(@QueryParam(value = "name", required = false) String name,
       @QueryParam(value = "minPrice", required = false) Double minPrice,
       @QueryParam(value = "maxPrice", required = false) Double maxPrice) {
 
-    return productStore.values().stream()
-        .filter(p -> name == null || p.getName().contains(name))
+    return productStore.values().stream().filter(p -> name == null || p.getName().contains(name))
         .filter(p -> minPrice == null || p.getPrice() >= minPrice)
-        .filter(p -> maxPrice == null || p.getPrice() <= maxPrice)
-        .toList();
+        .filter(p -> maxPrice == null || p.getPrice() <= maxPrice).toList();
   }
 
   // 私有辅助方法

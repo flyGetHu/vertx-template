@@ -7,3 +7,11 @@ mvn pmd:check -q
 
 echo "✓ 代码检查通过，允许提交"
 echo "======================================="
+
+// ... existing code ...
+# 自动执行 spotless 格式化和 import 优化
+./mvnw spotless:apply
+if [ $? -ne 0 ]; then
+  echo "[ERROR] 代码格式化未通过，请修复后再提交。"
+  exit 1
+fi
