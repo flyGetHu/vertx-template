@@ -42,17 +42,19 @@ public class DatabaseConfig {
 
       // 数据库连接配置
       final MySQLConnectOptions connectOptions = new MySQLConnectOptions()
-          .setHost(dbConfig.getString("host", "localhost"))
-          .setPort(dbConfig.getInteger("port", 3306))
-          .setDatabase(dbConfig.getString("database", "vertx_demo"))
-          .setUser(dbConfig.getString("username", "root"))
-          .setPassword(dbConfig.getString("password", "root"))
-          .setConnectTimeout(dbConfig.getInteger("connect_timeout", 10000))
-          .setIdleTimeout(dbConfig.getInteger("idle_timeout", 30000));
+        .setHost(dbConfig.getString("host", "localhost"))
+        .setPort(dbConfig.getInteger("port", 3306))
+        .setDatabase(dbConfig.getString("database", "vertx_demo"))
+        .setUser(dbConfig.getString("username", "root"))
+        .setPassword(dbConfig.getString("password", "root"))
+        .setConnectTimeout(dbConfig.getInteger("connect_timeout", 10000))
+        .setIdleTimeout(dbConfig.getInteger("idle_timeout", 30000));
 
       // 连接池配置
       final PoolOptions poolOptions = new PoolOptions()
-          .setMaxSize(dbConfig.getInteger("max_pool_size", 5));
+        .setMaxLifetime(dbConfig.getInteger("max_lifetime", 60000))
+        .setMaxWaitQueueSize(dbConfig.getInteger("max_wait_queue_size", 100))
+        .setMaxSize(dbConfig.getInteger("max_pool_size", 5));
 
       // 创建连接池（使用通用Pool API）
       this.pool = Pool.pool(vertx, connectOptions, poolOptions);

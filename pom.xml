@@ -219,18 +219,20 @@
       </plugin>
 
       <plugin>
-        <groupId>com.alibaba.p3c</groupId>
-        <artifactId>p3c-pmd</artifactId>
-        <version>2.1.1</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <version>3.19.0</version>
         <executions>
           <execution>
             <phase>validate</phase>
             <goals>
-              <goal>pmd</goal>
+              <goal>check</goal>
             </goals>
           </execution>
         </executions>
         <configuration>
+          <printFailingErrors>true</printFailingErrors>
+          <failOnViolation>true</failOnViolation>
           <printRuleViolations>true</printRuleViolations>
           <rulesets>
             <ruleset>rulesets/java/ali-comment.xml</ruleset>

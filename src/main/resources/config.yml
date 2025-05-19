@@ -33,4 +33,5 @@ database:
   max_pool_size: 5
   idle_timeout: 30000
   connect_timeout: 10000
-  query_timeout: 10000
+  max_lifetime:  60000
+  max_wait_queue_size:  100
