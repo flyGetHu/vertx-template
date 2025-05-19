@@ -3,19 +3,12 @@ set -e
 
 msg=$(cat "$1")
 
-# 允许空提交信息
-if [ -z "$msg" ]; then
-  echo "✓ 允许空提交信息"
-  exit 0
-fi
-
-# 支持更宽松的格式：允许不带括号的范围，冒号后不要求空格
-if ! echo "$msg" | grep -E '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert|merge|release|optimize)(\([^)]+\))?:( )?.*'; then
+# 严格模式：类型(范围): 描述，类型和范围必须符合规范，冒号后必须有空格
+if ! echo "$msg" | grep -Eq '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert|merge|release|optimize)\([a-zA-Z0-9_-]+\): .+'; then
   echo "================ 提交信息格式错误 ================"
-  echo "提交信息必须遵循以下格式："
-  echo "  类型(可选范围): 描述"
-  echo "  或简化格式："
-  echo "  类型: 描述"
+  echo "提交信息必须遵循以下严格格式："
+  echo "  类型(范围): 描述"
+  echo "  例如：feat(core): 新增用户登录功能"
   echo ""
   echo "支持的类型："
   echo "  feat     - 新功能"
