@@ -18,8 +18,7 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @Inject
-  public GlobalExceptionHandler() {
-  }
+  public GlobalExceptionHandler() {}
 
   @Override
   public void handle(RoutingContext ctx) {
