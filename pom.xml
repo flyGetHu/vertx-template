@@ -27,7 +27,7 @@
     <validation.version>3.0.2</validation.version>
     <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
     <el.api.version>4.0.2</el.api.version>
-    <main.verticle>com.vertx.template.MainVerticle</main.verticle>
+    <main.verticle>com.vertx.template.verticle.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
   </properties>
 
