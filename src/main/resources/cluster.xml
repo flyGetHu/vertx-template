@@ -55,13 +55,6 @@
     <backup-count>1</backup-count>
   </map>
 
-  <!-- 事件总线对象映射配置 -->
-  <serialization>
-    <portable-factories>
-      <portable-factory factory-id="1">
-        io.vertx.core.eventbus.impl.codecs.ClusterSerializablePortableFactory
-      </portable-factory>
-    </portable-factories>
-  </serialization>
+  <!-- 移除事件总线对象映射配置，避免ClassNotFoundException -->
 
 </hazelcast>
