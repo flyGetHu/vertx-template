@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -29,6 +29,7 @@
     <el.api.version>4.0.2</el.api.version>
     <main.verticle>com.vertx.template.verticle.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
+    <spotless.version>2.44.0</spotless.version>
   </properties>
 
   <dependencyManagement>
@@ -202,93 +203,27 @@
       </plugin>
       <!-- 集成常见质量检查插件 -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.5.0</version>
-        <executions>
-          <execution>
-            <id>enforce-java</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <version>[21,22)</version>
-                </requireJavaVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.44.0</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>apply</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-        </executions>
+        <version>${spotless.version}</version>
         <configuration>
+          <!-- 通用配置 -->
+          <encoding>UTF-8</encoding>
+          <ratchetFrom>origin/main</ratchetFrom>
+
+          <!-- Java文件格式化配置 -->
           <java>
-            <eclipse>
-              <file>${basedir}\eclipse-formatter.xml</file>
-            </eclipse>
+            <!-- 指定要格式化的Java文件 -->
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+            <importOrder />
+            <prettier />
+            <removeUnusedImports />
+            <formatAnnotations />
           </java>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-        <version>3.19.0</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <printFailingErrors>true</printFailingErrors>
-          <failOnViolation>true</failOnViolation>
-          <verbose>true</verbose>
-          <!-- 规则集顺序：先阿里巴巴，再补充官方推荐，确保规范优先且覆盖全面 -->
-          <rulesets>
-            <!-- 优先使用阿里巴巴 P3C 规则集 -->
-            <ruleset>rulesets/java/ali-comment.xml</ruleset>
-            <ruleset>rulesets/java/ali-concurrent.xml</ruleset>
-            <ruleset>rulesets/java/ali-constant.xml</ruleset>
-            <ruleset>rulesets/java/ali-exception.xml</ruleset>
-            <ruleset>rulesets/java/ali-flowcontrol.xml</ruleset>
-            <ruleset>rulesets/java/ali-naming.xml</ruleset>
-            <ruleset>rulesets/java/ali-oop.xml</ruleset>
-            <ruleset>rulesets/java/ali-orm.xml</ruleset>
-            <ruleset>rulesets/java/ali-other.xml</ruleset>
-            <ruleset>rulesets/java/ali-set.xml</ruleset>
-            <!-- 补充 PMD 官方推荐常用规则集，提升覆盖面 -->
-            <ruleset>category/java/bestpractices.xml</ruleset>
-            <ruleset>category/java/codestyle.xml</ruleset>
-            <ruleset>category/java/design.xml</ruleset>
-            <ruleset>category/java/errorprone.xml</ruleset>
-            <ruleset>category/java/performance.xml</ruleset>
-            <ruleset>category/java/documentation.xml</ruleset>
-            <ruleset>category/java/multithreading.xml</ruleset>
-            <ruleset>category/java/security.xml</ruleset>
-          </rulesets>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>com.alibaba.p3c</groupId>
-            <artifactId>p3c-pmd</artifactId>
-            <version>2.1.1</version>
-          </dependency>
-        </dependencies>
       </plugin>
     </plugins>
   </build>
