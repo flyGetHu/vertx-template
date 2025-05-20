@@ -257,7 +257,7 @@
         <configuration>
           <printFailingErrors>true</printFailingErrors>
           <failOnViolation>true</failOnViolation>
-          <printRuleViolations>true</printRuleViolations>
+          <verbose>true</verbose>
           <!-- 规则集顺序：先阿里巴巴，再补充官方推荐，确保规范优先且覆盖全面 -->
           <rulesets>
             <!-- 优先使用阿里巴巴 P3C 规则集 -->
