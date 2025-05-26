@@ -30,6 +30,7 @@
     <main.verticle>com.vertx.template.verticle.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
     <spotless.version>2.44.0</spotless.version>
+    <googleJavaFormat.version>1.24.0</googleJavaFormat.version>
   </properties>
 
   <dependencyManagement>
@@ -220,7 +221,7 @@
             </includes>
             <!-- 使用Google Java Format进行代码格式化 -->
             <googleJavaFormat>
-              <version>1.24.0</version>
+              <version>${googleJavaFormat.version}</version>
               <style>GOOGLE</style>
             </googleJavaFormat>
             <!-- 导入语句排序 -->
