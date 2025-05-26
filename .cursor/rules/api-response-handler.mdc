@@ -3,6 +3,15 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "API响应处理机制 - 统一响应格式、异常处理和控制器简化方案"
+auto_attachments:
+  - "src/**/controller/*.java"
+  - "src/**/handler/*.java"
+  - "src/**/exception/*.java"
+  - "src/**/model/ApiResponse.java"
+---
+
 # API响应处理机制
 
 本项目实现了统一的API响应处理机制，简化了控制器代码并确保一致的响应格式。

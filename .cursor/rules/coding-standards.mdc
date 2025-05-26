@@ -3,6 +3,13 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "Vert.x项目Java编码规范 - 定义变量声明、方法设计、异常处理、路由控制器等编码标准"
+auto_attachments:
+  - "**/*.java"
+  - "pom.xml"
+---
+
 # Vert.x 项目编码规范
 
 本规范定义了项目的Java代码风格、结构和最佳实践。

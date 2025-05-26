@@ -3,6 +3,15 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "Vert.x模板项目结构规范 - 定义项目目录结构、核心模块组织和文件命名约定"
+auto_attachments:
+  - "src/**/*.java"
+  - "src/**/*.yml"
+  - "src/**/*.xml"
+  - "*.md"
+---
+
 # Vert.x模板项目结构
 
 本项目是基于Vert.x的模板项目，使用JDK21虚拟线程构建的响应式Web应用。

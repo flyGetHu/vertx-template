@@ -3,6 +3,15 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "JDK21虚拟线程与Future.await使用指南 - 异步代码同步化和虚拟线程最佳实践"
+auto_attachments:
+  - "src/**/Run.java"
+  - "src/**/MainVerticle.java"
+  - "src/**/controller/*.java"
+  - "src/**/service/*.java"
+---
+
 # JDK21虚拟线程与Future.await使用指南
 
 本项目充分利用JDK21虚拟线程特性，使用`Future.await()`方法简化异步代码。

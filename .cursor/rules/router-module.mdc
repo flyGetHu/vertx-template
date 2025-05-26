@@ -3,6 +3,15 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "路由模块设计指南 - 基于注解的路由系统、参数解析、校验和响应处理"
+auto_attachments:
+  - "src/**/controller/*.java"
+  - "src/**/router/**/*.java"
+  - "src/**/handler/*.java"
+  - "src/**/model/*.java"
+---
+
 # 路由模块设计指南
 
 本项目采用基于注解的路由设计，类似Spring Boot的路由定义方式，简化开发并提高代码可读性。

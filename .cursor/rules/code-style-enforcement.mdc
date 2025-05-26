@@ -3,6 +3,14 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "代码风格自动化工具配置 - Spotless插件使用指南和Git Hooks集成"
+auto_attachments:
+  - "pom.xml"
+  - "**/*.java"
+  - ".gitignore"
+---
+
 # 代码风格自动化工具
 
 本项目使用Spotless作为代码风格检查和格式化工具，确保代码库保持一致的编码风格。

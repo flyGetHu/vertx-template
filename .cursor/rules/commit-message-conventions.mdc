@@ -3,6 +3,14 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "提交消息格式规范 - Git提交消息类型、格式要求和Git Hooks集成"
+auto_attachments:
+  - ".git/**"
+  - "githooks/**"
+  - "*.md"
+---
+
 # 提交消息格式规范
 
 本项目采用严格的提交消息格式规范，以保持版本历史的清晰性和可追踪性。

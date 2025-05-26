@@ -3,6 +3,14 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "YAML配置系统指南 - Vert.x Config模块使用、配置文件结构和优先级规则"
+auto_attachments:
+  - "src/main/resources/config.yml"
+  - "src/**/config/*.java"
+  - "src/**/ConfigLoader.java"
+---
+
 # YAML配置系统指南
 
 本项目使用Vert.x Config模块从YAML文件加载配置。

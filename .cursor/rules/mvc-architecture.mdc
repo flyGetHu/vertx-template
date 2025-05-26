@@ -3,6 +3,16 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "MVC架构模式规范 - 控制器、服务、仓库、模型层的设计原则和数据流程"
+auto_attachments:
+  - "src/**/controller/*.java"
+  - "src/**/service/*.java"
+  - "src/**/repository/*.java"
+  - "src/**/model/*.java"
+  - "src/**/routes/*.java"
+---
+
 # MVC架构模式
 
 本项目采用扩展的MVC(Model-View-Controller)架构模式，结合响应式编程和依赖注入实现可维护、可测试的代码结构。
