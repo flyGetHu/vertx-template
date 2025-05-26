@@ -218,9 +218,16 @@
               <include>src/main/java/**/*.java</include>
               <include>src/test/java/**/*.java</include>
             </includes>
+            <!-- 使用Google Java Format进行代码格式化 -->
+            <googleJavaFormat>
+              <version>1.24.0</version>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+            <!-- 导入语句排序 -->
             <importOrder />
-            <prettier />
+            <!-- 移除未使用的导入 -->
             <removeUnusedImports />
+            <!-- 格式化注解 -->
             <formatAnnotations />
           </java>
         </configuration>
