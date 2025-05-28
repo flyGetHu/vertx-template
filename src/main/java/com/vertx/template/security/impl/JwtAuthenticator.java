@@ -21,23 +21,25 @@ public class JwtAuthenticator implements Authenticator {
   private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticator.class);
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String BEARER_PREFIX = "Bearer ";
-  private static final int EXPIRE_OFFSET_MINUTES = 5; // 过期时间偏移5分钟
-
   private final JWTAuth jwtAuth;
+  private final int expireOffsetMinutes;
 
   @Inject
   public JwtAuthenticator(JsonObject config) {
-    // 从配置中获取JWT密钥，如果没有配置则使用默认密钥
-    String secret =
-        config
-            .getJsonObject("jwt", new JsonObject())
-            .getString("secret", "default-secret-key-change-in-production");
+    // 从配置中获取JWT配置
+    JsonObject jwtConfig = config.getJsonObject("jwt", new JsonObject());
+
+    String secret = jwtConfig.getString("secret", "NvkY5HqIQAJf1eZZzxDp52MIf81aj4Ow");
+    String algorithm = jwtConfig.getString("algorithm", "HS256");
+    this.expireOffsetMinutes = jwtConfig.getInteger("expire_offset_minutes", 5);
 
     JWTAuthOptions jwtAuthOptions =
         new JWTAuthOptions()
-            .addPubSecKey(new PubSecKeyOptions().setAlgorithm("HS256").setBuffer(secret));
+            .addPubSecKey(new PubSecKeyOptions().setAlgorithm(algorithm).setBuffer(secret));
 
     this.jwtAuth = JWTAuth.create(null, jwtAuthOptions);
+
+    logger.info("JWT认证器初始化完成，算法: {}, 过期偏移: {}分钟", algorithm, expireOffsetMinutes);
   }
 
   @Override
@@ -52,12 +54,22 @@ public class JwtAuthenticator implements Authenticator {
 
     try {
       // 验证JWT token
-      JsonObject payload = jwtAuth.authenticate(new TokenCredentials(token)).result().principal();
+      jwtAuth.authenticate(new TokenCredentials(token)).result().principal();
 
-      // 检查过期时间（支持5分钟偏移）
+      // 手动解析JWT payload来获取完整的claims信息
+      String[] tokenParts = token.split("\\.");
+      if (tokenParts.length != 3) {
+        throw new AuthenticationException("无效的JWT token格式");
+      }
+
+      // 解码payload部分
+      String payloadJson = new String(java.util.Base64.getDecoder().decode(tokenParts[1]));
+      JsonObject payload = new JsonObject(payloadJson);
+
+      // 检查过期时间（支持配置的偏移时间）
       long exp = payload.getLong("exp", 0L);
       long now = Instant.now().getEpochSecond();
-      long expWithOffset = exp + (EXPIRE_OFFSET_MINUTES * 60);
+      long expWithOffset = exp + (expireOffsetMinutes * 60);
 
       if (now > expWithOffset) {
         throw new AuthenticationException("Token已过期");

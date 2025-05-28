@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.ValidationException;
 import com.vertx.template.model.ApiResponse;
+import com.vertx.template.security.AuthenticationException;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
@@ -105,28 +106,36 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
    * @return API响应对象
    */
   private ApiResponse<?> buildErrorResponse(Throwable failure, String errorId) {
-    if (failure instanceof ValidationException) {
-      // 参数校验异常，包含详细的校验错误信息
-      ValidationException ex = (ValidationException) failure;
-      ApiResponse<?> response = ApiResponse.error(ex.getCode(), ex.getMessage());
-      // 添加验证错误信息
-      response.setExtra("validationErrors", ex.getValidationErrors());
-      return response;
-    } else if (failure instanceof BusinessException) {
-      // 业务异常直接返回异常信息
-      BusinessException ex = (BusinessException) failure;
-      return ApiResponse.error(ex.getCode(), ex.getMessage());
-    } else if (isSerializationException(failure)) {
-      // 序列化异常返回通用错误信息，不暴露技术细节
-      logger.error("[{}] 数据序列化失败，请检查数据模型配置", errorId);
-      return ApiResponse.error(500, "数据处理异常，请稍后重试");
-    } else if (isValidationException(failure)) {
-      // 其他参数校验异常返回友好提示
-      return ApiResponse.error(400, "请求参数格式错误");
-    } else {
-      // 其他系统异常返回通用错误信息
-      return ApiResponse.error(500, "系统繁忙，请稍后重试");
-    }
+    return switch (failure) {
+      case ValidationException ex -> {
+        // 参数校验异常，包含详细的校验错误信息
+        final var response = ApiResponse.error(ex.getCode(), ex.getMessage());
+        // 添加验证错误信息
+        response.setExtra("validationErrors", ex.getValidationErrors());
+        yield response;
+      }
+      case AuthenticationException ex -> {
+        // 认证异常，返回401状态码和认证失败信息
+        yield ApiResponse.error(ex.getCode(), ex.getMessage());
+      }
+      case BusinessException ex -> {
+        // 业务异常直接返回异常信息
+        yield ApiResponse.error(ex.getCode(), ex.getMessage());
+      }
+      case Throwable ex when isSerializationException(ex) -> {
+        // 序列化异常返回通用错误信息，不暴露技术细节
+        logger.error("[{}] 数据序列化失败，请检查数据模型配置", errorId);
+        yield ApiResponse.error(500, "数据处理异常，请稍后重试");
+      }
+      case Throwable ex when isValidationException(ex) -> {
+        // 其他参数校验异常返回友好提示
+        yield ApiResponse.error(400, "请求参数格式错误");
+      }
+      default -> {
+        // 其他系统异常返回通用错误信息
+        yield ApiResponse.error(500, "系统繁忙，请稍后重试");
+      }
+    };
   }
 
   /**

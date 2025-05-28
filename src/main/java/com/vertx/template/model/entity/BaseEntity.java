@@ -126,64 +126,50 @@ public abstract class BaseEntity {
    * @return 对应类型的值
    */
   private static Object getValueFromRow(Row row, String columnName, Class<?> fieldType) {
-    // 数值类型映射
-    if (fieldType == Long.class || fieldType == long.class) {
-      return row.getLong(columnName);
-    } else if (fieldType == Integer.class || fieldType == int.class) {
-      return row.getInteger(columnName);
-    } else if (fieldType == Short.class || fieldType == short.class) {
-      return row.getShort(columnName);
-    } else if (fieldType == Byte.class || fieldType == byte.class) {
-      return row.getShort(columnName).byteValue();
-    } else if (fieldType == Double.class || fieldType == double.class) {
-      return row.getDouble(columnName);
-    } else if (fieldType == Float.class || fieldType == float.class) {
-      return row.getFloat(columnName);
-    } else if (fieldType == BigDecimal.class) {
-      return row.getBigDecimal(columnName);
-    } else if (fieldType == BigInteger.class) {
-      // BigInteger通常用于NUMERIC(precision=0)或DECIMAL(precision=0)
-      BigDecimal decimal = row.getBigDecimal(columnName);
-      return decimal != null ? decimal.toBigInteger() : null;
-    } else if (fieldType == Numeric.class) {
-      return row.getNumeric(columnName);
-    }
-    // 布尔类型映射 (MySQL BOOLEAN/BOOL -> TINYINT(1))
-    else if (fieldType == Boolean.class || fieldType == boolean.class) {
-      return row.getBoolean(columnName);
-    }
-    // 字符串类型映射 (CHAR, VARCHAR, TEXT, ENUM, SET)
-    else if (fieldType == String.class) {
-      return row.getString(columnName);
-    }
-    // 日期时间类型映射
-    else if (fieldType == LocalDateTime.class) {
-      return row.getLocalDateTime(columnName);
-    } else if (fieldType == LocalDate.class) {
-      return row.getLocalDate(columnName);
-    } else if (fieldType == LocalTime.class) {
-      return row.getLocalTime(columnName);
-    } else if (fieldType == Duration.class) {
-      // MySQL TIME类型映射到Duration
-      return row.getTemporal(columnName);
-    }
-    // 二进制类型映射 (BINARY, VARBINARY, BLOB系列)
-    else if (fieldType == Buffer.class) {
-      return row.getBuffer(columnName);
-    } else if (fieldType == byte[].class) {
-      Buffer buffer = row.getBuffer(columnName);
-      return buffer != null ? buffer.getBytes() : null;
-    }
-    // JSON类型映射
-    else if (fieldType == JsonObject.class) {
-      return row.getJsonObject(columnName);
-    } else if (fieldType == JsonArray.class) {
-      return row.getJsonArray(columnName);
-    }
-    // 通用对象类型
-    else {
-      return row.getValue(columnName);
-    }
+    return switch (fieldType) {
+      // 数值类型映射
+      case Class<?> c when c == Long.class || c == long.class -> row.getLong(columnName);
+      case Class<?> c when c == Integer.class || c == int.class -> row.getInteger(columnName);
+      case Class<?> c when c == Short.class || c == short.class -> row.getShort(columnName);
+      case Class<?> c when c == Byte.class || c == byte.class ->
+          row.getShort(columnName).byteValue();
+      case Class<?> c when c == Double.class || c == double.class -> row.getDouble(columnName);
+      case Class<?> c when c == Float.class || c == float.class -> row.getFloat(columnName);
+      case Class<?> c when c == BigDecimal.class -> row.getBigDecimal(columnName);
+      case Class<?> c when c == BigInteger.class -> {
+        // BigInteger通常用于NUMERIC(precision=0)或DECIMAL(precision=0)
+        BigDecimal decimal = row.getBigDecimal(columnName);
+        yield decimal != null ? decimal.toBigInteger() : null;
+      }
+      case Class<?> c when c == Numeric.class -> row.getNumeric(columnName);
+
+      // 布尔类型映射 (MySQL BOOLEAN/BOOL -> TINYINT(1))
+      case Class<?> c when c == Boolean.class || c == boolean.class -> row.getBoolean(columnName);
+
+      // 字符串类型映射 (CHAR, VARCHAR, TEXT, ENUM, SET)
+      case Class<?> c when c == String.class -> row.getString(columnName);
+
+      // 日期时间类型映射
+      case Class<?> c when c == LocalDateTime.class -> row.getLocalDateTime(columnName);
+      case Class<?> c when c == LocalDate.class -> row.getLocalDate(columnName);
+      case Class<?> c when c == LocalTime.class -> row.getLocalTime(columnName);
+      case Class<?> c when c == Duration.class ->
+          row.getTemporal(columnName); // MySQL TIME类型映射到Duration
+
+      // 二进制类型映射 (BINARY, VARBINARY, BLOB系列)
+      case Class<?> c when c == Buffer.class -> row.getBuffer(columnName);
+      case Class<?> c when c == byte[].class -> {
+        Buffer buffer = row.getBuffer(columnName);
+        yield buffer != null ? buffer.getBytes() : null;
+      }
+
+      // JSON类型映射
+      case Class<?> c when c == JsonObject.class -> row.getJsonObject(columnName);
+      case Class<?> c when c == JsonArray.class -> row.getJsonArray(columnName);
+
+      // 通用对象类型
+      default -> row.getValue(columnName);
+    };
   }
 
   /**

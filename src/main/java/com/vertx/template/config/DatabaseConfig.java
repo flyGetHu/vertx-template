@@ -36,30 +36,37 @@ public class DatabaseConfig {
   /** 初始化数据库连接池 */
   private void initialize() {
     try {
-      final JsonObject dbConfig = config.getJsonObject("database");
+      final JsonObject databaseConfig = config.getJsonObject("database");
 
-      if (dbConfig == null) {
+      if (databaseConfig == null) {
         logger.warn("数据库配置缺失，跳过数据库初始化");
+        return;
+      }
+
+      final JsonObject mysqlConfig = databaseConfig.getJsonObject("mysql");
+
+      if (mysqlConfig == null) {
+        logger.warn("MySQL配置缺失，跳过数据库初始化");
         return;
       }
 
       // 数据库连接配置
       final MySQLConnectOptions connectOptions =
           new MySQLConnectOptions()
-              .setHost(dbConfig.getString("host", "localhost"))
-              .setPort(dbConfig.getInteger("port", 3306))
-              .setDatabase(dbConfig.getString("database", "vertx_demo"))
-              .setUser(dbConfig.getString("username", "root"))
-              .setPassword(dbConfig.getString("password", "root"))
-              .setConnectTimeout(dbConfig.getInteger("connect_timeout", 10000))
-              .setIdleTimeout(dbConfig.getInteger("idle_timeout", 30000));
+              .setHost(mysqlConfig.getString("host", "localhost"))
+              .setPort(mysqlConfig.getInteger("port", 3306))
+              .setDatabase(mysqlConfig.getString("database", "vertx_demo"))
+              .setUser(mysqlConfig.getString("username", "root"))
+              .setPassword(mysqlConfig.getString("password", "root"))
+              .setConnectTimeout(mysqlConfig.getInteger("connect_timeout", 10000))
+              .setIdleTimeout(mysqlConfig.getInteger("idle_timeout", 30000));
 
       // 连接池配置
       final PoolOptions poolOptions =
           new PoolOptions()
-              .setMaxLifetime(dbConfig.getInteger("max_lifetime", 60000))
-              .setMaxWaitQueueSize(dbConfig.getInteger("max_wait_queue_size", 100))
-              .setMaxSize(dbConfig.getInteger("max_pool_size", 5));
+              .setMaxLifetime(mysqlConfig.getInteger("max_lifetime", 60000))
+              .setMaxWaitQueueSize(mysqlConfig.getInteger("max_wait_queue_size", 100))
+              .setMaxSize(mysqlConfig.getInteger("max_pool_size", 5));
 
       // 创建连接池（使用通用Pool API）
       this.pool = Pool.pool(vertx, connectOptions, poolOptions);

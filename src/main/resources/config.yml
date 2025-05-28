@@ -28,14 +28,27 @@ cors:
 
 # 数据库配置
 database:
-  type: mysql
-  host: localhost
-  port: 3306
-  database: cte
-  username: root
-  password: root123
-  max_pool_size: 5
-  idle_timeout: 30000
-  connect_timeout: 10000
-  max_lifetime: 60000
-  max_wait_queue_size: 100
+  mysql:
+    host: localhost
+    port: 3306
+    database: cte
+    username: root
+    password: root123
+    max_pool_size: 5
+    idle_timeout: 30000
+    connect_timeout: 10000
+    max_lifetime: 60000
+    max_wait_queue_size: 100
+  # redis:
+  #   host: localhost
+  #   port: 6379
+  #   password:
+  #   database: 0
+  #   max_pool_size: 10
+
+# JWT配置
+jwt:
+  secret: "run6SCrvXZTQ3Mh4M9EZD3dSZYYp1se5"
+  expire_seconds: 3600 # 1小时过期
+  expire_offset_minutes: 5 # 过期时间偏移5分钟
+  algorithm: "HS256"

@@ -1,5 +1,6 @@
 package com.vertx.template.router.handler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.ValidationException;
@@ -38,6 +39,7 @@ public class AnnotationRouterHandler {
   private static final Logger logger = LoggerFactory.getLogger(AnnotationRouterHandler.class);
   private final Injector injector;
   private final ResponseHandler responseHandler;
+  private final ObjectMapper objectMapper;
   private final AuthenticationManager authenticationManager;
   private static final String BASE_PACKAGE = "com.vertx.template";
 
@@ -49,6 +51,8 @@ public class AnnotationRouterHandler {
     this.injector = injector;
     this.responseHandler = responseHandler;
     this.authenticationManager = authenticationManager;
+    this.objectMapper = new ObjectMapper();
+    this.objectMapper.findAndRegisterModules(); // 注册时间模块等
   }
 
   /**
@@ -186,11 +190,7 @@ public class AnnotationRouterHandler {
           try {
             // 检查认证类型（默认所有接口都需要认证）
             AuthType authType = getAuthType(controller, method);
-            try {
-              authenticationManager.authenticate(ctx, authType);
-            } catch (AuthenticationException e) {
-              throw e;
-            }
+            authenticationManager.authenticate(ctx, authType);
 
             // 判断方法参数类型并注入值
             Object[] args = resolveMethodArgs(method, ctx);
@@ -209,10 +209,14 @@ public class AnnotationRouterHandler {
             throw e;
           } catch (Exception e) {
             logger.error("调用控制器方法时发生异常", e);
-            if (e.getCause() instanceof BusinessException) {
-              throw (BusinessException) e.getCause();
-            }
-            throw new BusinessException(500, "Internal Server Error");
+            throw switch (e) {
+              case AuthenticationException authEx -> authEx;
+              case Exception ex when ex.getCause() instanceof BusinessException ->
+                  (BusinessException) ex.getCause();
+              case Exception ex when ex.getCause() instanceof AuthenticationException ->
+                  (AuthenticationException) ex.getCause();
+              default -> new BusinessException(500, "Internal Server Error");
+            };
           }
         });
   }
@@ -297,7 +301,25 @@ public class AnnotationRouterHandler {
 
               case RequestBody ignored -> {
                 try {
-                  Object body = ctx.body().asJsonObject().mapTo(paramType);
+                  JsonObject jsonBody = ctx.body().asJsonObject();
+                  if (jsonBody == null || jsonBody.isEmpty()) {
+                    throw new ValidationException("请求体不能为空");
+                  }
+
+                  // 使用Jackson ObjectMapper进行转换，而不是直接使用mapTo
+                  Object body;
+                  if (paramType == JsonObject.class) {
+                    body = jsonBody;
+                  } else {
+                    try {
+                      // 先转换为JSON字符串，再使用Jackson反序列化
+                      String jsonString = jsonBody.encode();
+                      body = objectMapper.readValue(jsonString, paramType);
+                    } catch (Exception e) {
+                      throw new ValidationException("请求体转换失败: " + e.getMessage());
+                    }
+                  }
+
                   if (body == null) {
                     throw new ValidationException("请求体不能为空");
                   }

@@ -15,23 +15,24 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class JwtUtils {
   private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
-  private static final int DEFAULT_EXPIRE_SECONDS = 3600; // 默认1小时过期
-
   private final JWTAuth jwtAuth;
+  private final int defaultExpireSeconds;
 
   @Inject
   public JwtUtils(JsonObject config) {
-    String secret =
-        config
-            .getJsonObject("jwt", new JsonObject())
-            .getString("secret", "default-secret-key-change-in-production");
+    // 从配置中获取JWT配置
+    JsonObject jwtConfig = config.getJsonObject("jwt", new JsonObject());
+
+    String secret = jwtConfig.getString("secret", "default-secret-key-change-in-production");
+    String algorithm = jwtConfig.getString("algorithm", "HS256");
+    this.defaultExpireSeconds = jwtConfig.getInteger("expire_seconds", 3600);
 
     JWTAuthOptions jwtAuthOptions =
         new JWTAuthOptions()
-            .addPubSecKey(new PubSecKeyOptions().setAlgorithm("HS256").setBuffer(secret));
+            .addPubSecKey(new PubSecKeyOptions().setAlgorithm(algorithm).setBuffer(secret));
 
     this.jwtAuth = JWTAuth.create(null, jwtAuthOptions);
-    logger.info("JWT工具类初始化完成");
+    logger.info("JWT工具类初始化完成，算法: {}, 默认过期时间: {}秒", algorithm, defaultExpireSeconds);
   }
 
   /**
@@ -41,7 +42,7 @@ public class JwtUtils {
    * @return JWT token
    */
   public String generateToken(String userId) {
-    return generateToken(userId, DEFAULT_EXPIRE_SECONDS);
+    return generateToken(userId, defaultExpireSeconds);
   }
 
   /**

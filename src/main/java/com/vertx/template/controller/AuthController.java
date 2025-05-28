@@ -1,7 +1,12 @@
 package com.vertx.template.controller;
 
-import com.vertx.template.router.annotation.*;
+import com.vertx.template.router.annotation.PostMapping;
+import com.vertx.template.router.annotation.RequestBody;
+import com.vertx.template.router.annotation.RequestMapping;
+import com.vertx.template.router.annotation.RestController;
 import com.vertx.template.security.JwtUtils;
+import com.vertx.template.security.annotation.AuthType;
+import com.vertx.template.security.annotation.RequireAuth;
 import io.vertx.core.json.JsonObject;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -24,6 +29,7 @@ public class AuthController {
 
   /** 用户登录 - 简化版本，实际项目中需要验证用户名密码 */
   @PostMapping("/login")
+  @RequireAuth(AuthType.NONE)
   public JsonObject login(@RequestBody JsonObject loginRequest) {
     String username = loginRequest.getString("username");
     String password = loginRequest.getString("password");
