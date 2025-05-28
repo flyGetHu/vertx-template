@@ -16,7 +16,8 @@ import org.mockito.MockitoAnnotations;
 /** BaseEntity测试类 验证fromRow方法对各种数据类型的映射功能 */
 class BaseEntityTest {
 
-  @Mock private Row mockRow;
+  @Mock
+  private Row mockRow;
 
   private TestEntity testEntity;
 
@@ -29,8 +30,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithStringField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("name");
     when(mockRow.getString("name")).thenReturn("测试用户");
-    when(mockRow.getValue("name")).thenReturn("测试用户");
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -43,8 +45,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithIntegerField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("age");
     when(mockRow.getInteger("age")).thenReturn(25);
-    when(mockRow.getValue("age")).thenReturn(25);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -57,8 +60,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithLongField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("id");
     when(mockRow.getLong("id")).thenReturn(123456L);
-    when(mockRow.getValue("id")).thenReturn(123456L);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -71,8 +75,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithBooleanField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("active");
     when(mockRow.getBoolean("active")).thenReturn(true);
-    when(mockRow.getValue("active")).thenReturn(true);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -85,8 +90,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithDoubleField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("salary");
     when(mockRow.getDouble("salary")).thenReturn(5000.50);
-    when(mockRow.getValue("salary")).thenReturn(5000.50);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -99,8 +105,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithFloatField() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("score");
     when(mockRow.getFloat("score")).thenReturn(95.5f);
-    when(mockRow.getValue("score")).thenReturn(95.5f);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -114,8 +121,9 @@ class BaseEntityTest {
   void testFromRowWithLocalDateTimeField() {
     // 准备测试数据
     LocalDateTime testDateTime = LocalDateTime.of(2024, 1, 15, 10, 30, 0);
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("created_at"); // camelToSnake("createdAt")
     when(mockRow.getLocalDateTime("created_at")).thenReturn(testDateTime);
-    when(mockRow.getValue("created_at")).thenReturn(testDateTime);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -129,8 +137,9 @@ class BaseEntityTest {
   void testFromRowWithLocalDateField() {
     // 准备测试数据
     LocalDate testDate = LocalDate.of(2024, 1, 15);
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("birth_date"); // camelToSnake("birthDate")
     when(mockRow.getLocalDate("birth_date")).thenReturn(testDate);
-    when(mockRow.getValue("birth_date")).thenReturn(testDate);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -144,8 +153,9 @@ class BaseEntityTest {
   void testFromRowWithBigDecimalField() {
     // 准备测试数据
     BigDecimal testDecimal = new BigDecimal("999.99");
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("amount");
     when(mockRow.getBigDecimal("amount")).thenReturn(testDecimal);
-    when(mockRow.getValue("amount")).thenReturn(testDecimal);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -159,8 +169,9 @@ class BaseEntityTest {
   void testFromRowWithJsonObjectField() {
     // 准备测试数据
     JsonObject testJson = new JsonObject().put("key", "value");
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("metadata");
     when(mockRow.getJsonObject("metadata")).thenReturn(testJson);
-    when(mockRow.getValue("metadata")).thenReturn(testJson);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -173,14 +184,16 @@ class BaseEntityTest {
   @Test
   void testFromRowWithMultipleFields() {
     // 准备测试数据
+    when(mockRow.size()).thenReturn(4);
+    when(mockRow.getColumnName(0)).thenReturn("id");
+    when(mockRow.getColumnName(1)).thenReturn("name");
+    when(mockRow.getColumnName(2)).thenReturn("age");
+    when(mockRow.getColumnName(3)).thenReturn("active");
+
     when(mockRow.getLong("id")).thenReturn(1L);
-    when(mockRow.getValue("id")).thenReturn(1L);
     when(mockRow.getString("name")).thenReturn("张三");
-    when(mockRow.getValue("name")).thenReturn("张三");
     when(mockRow.getInteger("age")).thenReturn(30);
-    when(mockRow.getValue("age")).thenReturn(30);
     when(mockRow.getBoolean("active")).thenReturn(true);
-    when(mockRow.getValue("active")).thenReturn(true);
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -196,8 +209,9 @@ class BaseEntityTest {
   @Test
   void testFromRowWithNullValues() {
     // 准备测试数据
-    when(mockRow.getString("name")).thenReturn(null);
-    when(mockRow.getValue("name")).thenReturn(null);
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("name"); // Column "name" exists
+    when(mockRow.getString("name")).thenReturn(null); // Value is null
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
@@ -210,8 +224,11 @@ class BaseEntityTest {
   @Test
   void testFromRowWithNonExistentColumn() {
     // 准备测试数据 - 模拟列不存在的情况
-    when(mockRow.getValue("name")).thenThrow(new RuntimeException("Column not found"));
-    when(mockRow.getValue("age")).thenThrow(new RuntimeException("Column not found"));
+    // Simulate a row that has some other columns, but not 'name' or 'age'
+    when(mockRow.size()).thenReturn(1);
+    when(mockRow.getColumnName(0)).thenReturn("some_other_unrelated_column");
+    // No mocks for getValue("name") or getValue("age") are needed for this test's
+    // purpose,
 
     // 执行测试
     TestEntity result = BaseEntity.fromRow(mockRow, TestEntity.class);
