@@ -3,6 +3,7 @@ package com.vertx.template.security.impl;
 import com.vertx.template.security.AuthenticationException;
 import com.vertx.template.security.Authenticator;
 import com.vertx.template.security.UserContext;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.authentication.TokenCredentials;
@@ -54,7 +55,7 @@ public class JwtAuthenticator implements Authenticator {
 
     try {
       // 验证JWT token
-      jwtAuth.authenticate(new TokenCredentials(token)).result().principal();
+      Future.await(jwtAuth.authenticate(new TokenCredentials(token)));
 
       // 手动解析JWT payload来获取完整的claims信息
       String[] tokenParts = token.split("\\.");
