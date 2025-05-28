@@ -16,8 +16,7 @@ import org.mockito.MockitoAnnotations;
 /** BaseEntity测试类 验证fromRow方法对各种数据类型的映射功能 */
 class BaseEntityTest {
 
-  @Mock
-  private Row mockRow;
+  @Mock private Row mockRow;
 
   private TestEntity testEntity;
 

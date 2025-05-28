@@ -14,10 +14,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 基础实体类，提供通用的Row映射功能
@@ -29,23 +27,24 @@ public abstract class BaseEntity {
 
   /** 缓存类的字段信息，提高反射效率 */
   private static final Map<Class<?>, Field[]> CLASS_FIELDS_CACHE = new ConcurrentHashMap<>();
+
   /** 缓存Setter方法，提高反射效率 */
   private static final Map<String, Method> SETTER_METHOD_CACHE = new ConcurrentHashMap<>();
 
   /**
    * 通用的fromRow映射方法
    *
-   * @param row   数据库行对象
+   * @param row 数据库行对象
    * @param clazz 目标实体类
-   * @param <T>   实体类型
+   * @param <T> 实体类型
    * @return 映射后的实体对象
    */
   /**
    * 通用的fromRow映射方法，增加了字段和Setter方法缓存，并优化了列存在性检查。
    *
-   * @param row   数据库行对象
+   * @param row 数据库行对象
    * @param clazz 目标实体类
-   * @param <T>   实体类型
+   * @param <T> 实体类型
    * @return 映射后的实体对象
    */
   @SuppressWarnings("unchecked")
@@ -62,13 +61,16 @@ public abstract class BaseEntity {
       }
 
       // 获取所有字段并进行映射 (使用缓存)
-      Field[] fields = CLASS_FIELDS_CACHE.computeIfAbsent(clazz, k -> {
-        Field[] declaredFields = k.getDeclaredFields();
-        for (Field field : declaredFields) {
-          field.setAccessible(true); // 提高反射性能，并允许访问私有字段
-        }
-        return declaredFields;
-      });
+      Field[] fields =
+          CLASS_FIELDS_CACHE.computeIfAbsent(
+              clazz,
+              k -> {
+                Field[] declaredFields = k.getDeclaredFields();
+                for (Field field : declaredFields) {
+                  field.setAccessible(true); // 提高反射性能，并允许访问私有字段
+                }
+                return declaredFields;
+              });
 
       for (Field field : fields) {
         String fieldName = field.getName();
@@ -84,18 +86,27 @@ public abstract class BaseEntity {
           // 使用setter方法设置值 (使用缓存)
           String setterName = "set" + capitalize(fieldName);
           String cacheKey = clazz.getName() + "#" + setterName + "#" + field.getType().getName();
-          Method setter = SETTER_METHOD_CACHE.computeIfAbsent(cacheKey, k -> {
-            try {
-              Method m = clazz.getMethod(setterName, field.getType());
-              m.setAccessible(true); // 提高反射性能
-              return m;
-            } catch (NoSuchMethodException e) {
-              // 对于某些没有标准setter的字段（例如boolean类型的isXXX），可以尝试其他方式或记录警告
-              // 这里简单抛出运行时异常，或者可以根据实际情况调整
-              throw new RuntimeException("Setter method not found: " + setterName + " for field " + fieldName
-                  + " in class " + clazz.getSimpleName(), e);
-            }
-          });
+          Method setter =
+              SETTER_METHOD_CACHE.computeIfAbsent(
+                  cacheKey,
+                  k -> {
+                    try {
+                      Method m = clazz.getMethod(setterName, field.getType());
+                      m.setAccessible(true); // 提高反射性能
+                      return m;
+                    } catch (NoSuchMethodException e) {
+                      // 对于某些没有标准setter的字段（例如boolean类型的isXXX），可以尝试其他方式或记录警告
+                      // 这里简单抛出运行时异常，或者可以根据实际情况调整
+                      throw new RuntimeException(
+                          "Setter method not found: "
+                              + setterName
+                              + " for field "
+                              + fieldName
+                              + " in class "
+                              + clazz.getSimpleName(),
+                          e);
+                    }
+                  });
           setter.invoke(entity, value);
         }
       }
@@ -109,9 +120,9 @@ public abstract class BaseEntity {
   /**
    * 从Row中获取指定类型的值 根据Vert.x MySQL驱动的类型映射规范实现
    *
-   * @param row        数据库行对象
+   * @param row 数据库行对象
    * @param columnName 列名
-   * @param fieldType  字段类型
+   * @param fieldType 字段类型
    * @return 对应类型的值
    */
   private static Object getValueFromRow(Row row, String columnName, Class<?> fieldType) {
@@ -177,10 +188,10 @@ public abstract class BaseEntity {
 
   /**
    * 检查Row中是否包含指定列 (此方法已不再被fromRow直接使用，保留以供其他潜在用途或向后兼容).
-   * <p>
-   * 注意: {@link #fromRow(Row, Class)} 方法已优化为预取列名集合进行检查，性能更优。
    *
-   * @param row        数据库行对象
+   * <p>注意: {@link #fromRow(Row, Class)} 方法已优化为预取列名集合进行检查，性能更优。
+   *
+   * @param row 数据库行对象
    * @param columnName 列名
    * @return 是否包含该列
    * @deprecated 已被 {@link #fromRow(Row, Class)} 中的内联列名检查取代以提高性能。
@@ -202,7 +213,7 @@ public abstract class BaseEntity {
   /**
    * 驼峰转下划线
    *
-   * 将驼峰命名法（camelCase）字符串转换为下划线命名法（snake_case）字符串。
+   * <p>将驼峰命名法（camelCase）字符串转换为下划线命名法（snake_case）字符串。
    *
    * @param camelCase 驼峰命名字符串，例如 "userName" 或 "userID"
    * @return 对应的下划线命名字符串，例如 "user_name" 或 "user_id"
@@ -227,7 +238,7 @@ public abstract class BaseEntity {
   /**
    * 首字母大写
    *
-   * 将字符串的首字母大写。
+   * <p>将字符串的首字母大写。
    *
    * @param str 输入字符串，例如 "username" 或 "userId"
    * @return 首字母大写的字符串，例如 "Username" 或 "UserId"
