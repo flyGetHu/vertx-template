@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -8,29 +8,42 @@
   <version>1.0.0-SNAPSHOT</version>
 
   <properties>
+    <!-- ========== 项目基础配置 ========== -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jdk.version>21</jdk.version>
+    <main.verticle>com.vertx.template.verticle.MainVerticle</main.verticle>
+    <launcher.class>io.vertx.core.Launcher</launcher.class>
 
+    <!-- ========== Maven插件版本 ========== -->
     <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
-    <jdk.version>21</jdk.version>
+    <spotless.version>2.44.0</spotless.version>
+    <googleJavaFormat.version>1.24.0</googleJavaFormat.version>
 
+    <!-- ========== 核心框架版本 ========== -->
     <vertx.version>4.5.14</vertx.version>
-    <junit-jupiter.version>5.9.1</junit-jupiter.version>
-    <lombok.version>1.18.36</lombok.version>
-    <logback.version>1.4.14</logback.version>
+    <guice.version>5.1.0</guice.version>
+    <javax.inject.version>1</javax.inject.version>
+
+    <!-- ========== 日志框架版本 ========== -->
     <slf4j.version>2.0.13</slf4j.version>
+    <logback.version>1.4.14</logback.version>
+
+    <!-- ========== 工具库版本 ========== -->
+    <lombok.version>1.18.36</lombok.version>
     <jackson.version>2.15.2</jackson.version>
     <reflections.version>0.10.2</reflections.version>
-    <javax.inject.version>1</javax.inject.version>
+
+    <!-- ========== 校验框架版本 ========== -->
     <validation.version>3.0.2</validation.version>
     <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
     <el.api.version>4.0.2</el.api.version>
-    <main.verticle>com.vertx.template.verticle.MainVerticle</main.verticle>
-    <launcher.class>io.vertx.core.Launcher</launcher.class>
-    <spotless.version>2.44.0</spotless.version>
-    <googleJavaFormat.version>1.24.0</googleJavaFormat.version>
+
+    <!-- ========== 测试框架版本 ========== -->
+    <junit-jupiter.version>5.9.1</junit-jupiter.version>
+    <mockito.version>5.5.0</mockito.version>
   </properties>
 
   <dependencyManagement>
@@ -46,18 +59,22 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- ========== 核心框架依赖 ========== -->
+    <!-- Vert.x核心组件 -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-client</artifactId>
+      <artifactId>vertx-web</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-web</artifactId>
+      <artifactId>vertx-web-client</artifactId>
     </dependency>
+
+    <!-- 配置管理 -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-config</artifactId>
@@ -66,10 +83,14 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-config-yaml</artifactId>
     </dependency>
+
+    <!-- 集群支持 -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-hazelcast</artifactId>
     </dependency>
+
+    <!-- ========== 日志框架 ========== -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -80,23 +101,85 @@
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
     </dependency>
+
+    <!-- ========== 开发工具 ========== -->
+    <!-- Lombok代码生成工具 -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
-    <!--  json -->
+
+    <!-- ========== JSON处理 ========== -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
     </dependency>
+    <!-- Jackson JSR310时间类型支持 -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- ========== 依赖注入框架 ========== -->
+    <!-- Google Guice依赖注入容器 -->
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <version>${guice.version}</version>
+    </dependency>
+    <!-- JSR-330标准注解 -->
+    <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>${javax.inject.version}</version>
+    </dependency>
+    <!-- 注解扫描支持 -->
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>${reflections.version}</version>
+    </dependency>
+
+    <!-- ========== 参数校验框架 ========== -->
+    <!-- Jakarta Bean Validation API -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <version>${validation.version}</version>
+    </dependency>
+    <!-- Hibernate Validator实现 -->
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <version>${hibernate.validator.version}</version>
+    </dependency>
+    <!-- EL表达式支持 -->
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>jakarta.el</artifactId>
+      <version>${el.api.version}</version>
+    </dependency>
+
+    <!-- ========== 数据库相关 ========== -->
+    <!-- Vert.x MySQL客户端 -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-mysql-client</artifactId>
+    </dependency>
+
+    <!-- ========== 测试框架依赖 ========== -->
+    <!-- Vert.x测试支持 -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <!-- JUnit 5测试框架 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
@@ -109,46 +192,19 @@
       <version>${junit-jupiter.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- 依赖注入相关 -->
-    <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-      <version>5.1.0</version>
-    </dependency>
-    <!-- JSR-330标准注解 -->
-    <dependency>
-      <groupId>javax.inject</groupId>
-      <artifactId>javax.inject</artifactId>
-      <version>${javax.inject.version}</version>
-    </dependency>
-    <!-- 添加注解扫描支持 -->
-    <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-      <version>${reflections.version}</version>
-    </dependency>
 
-    <!-- 参数校验相关依赖 -->
+    <!-- Mockito模拟框架 -->
     <dependency>
-      <groupId>jakarta.validation</groupId>
-      <artifactId>jakarta.validation-api</artifactId>
-      <version>${validation.version}</version>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hibernate.validator</groupId>
-      <artifactId>hibernate-validator</artifactId>
-      <version>${hibernate.validator.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>jakarta.el</artifactId>
-      <version>${el.api.version}</version>
-    </dependency>
-
-    <!-- 数据库相关依赖 -->
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-mysql-client</artifactId>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

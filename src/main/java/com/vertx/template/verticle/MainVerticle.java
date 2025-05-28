@@ -1,6 +1,7 @@
 package com.vertx.template.verticle;
 
 import com.vertx.template.config.ConfigLoader;
+import com.vertx.template.config.JacksonConfig;
 import com.vertx.template.router.RouterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -16,6 +17,9 @@ public class MainVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
     try {
+      // 配置Jackson以支持Java 8时间类型
+      JacksonConfig.configure();
+
       // 加载配置（使用await直接获取结果）
       JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
 
