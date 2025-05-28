@@ -171,6 +171,12 @@
       <artifactId>vertx-mysql-client</artifactId>
     </dependency>
 
+    <!-- jwt认证 -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-jwt</artifactId>
+    </dependency>
+
     <!-- ========== 测试框架依赖 ========== -->
     <!-- Vert.x测试支持 -->
     <dependency>
