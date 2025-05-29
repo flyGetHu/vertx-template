@@ -17,7 +17,7 @@ public @interface Id {
   /**
    * 是否自动生成
    *
-   * @return true表示自动生成主键值
+   * @return true表示自动生成主键值，false表示使用FlexID生成器
    */
-  boolean generated() default true;
+  boolean generated() default false;
 }

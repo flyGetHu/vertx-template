@@ -1,5 +1,7 @@
 package com.vertx.template.model.entity;
 
+import com.vertx.template.annotation.Id;
+import com.vertx.template.annotation.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,11 +10,14 @@ import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 产品实体类 */
+/** 产品实体类 - 演示使用数据库自增ID策略 */
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Table("products")
 public class Product extends BaseEntity {
 
+  /** 产品ID - 使用数据库自增策略 */
+  @Id(generated = true)
   private Long id;
 
   @NotBlank(message = "产品名称不能为空") @Size(min = 2, max = 50, message = "产品名称长度必须在2-50之间") private String name;
