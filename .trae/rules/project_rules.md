@@ -1,390 +1,315 @@
 ---
-description:
+description: Vert.x项目开发规范和架构指南
 globs:
 alwaysApply: false
 ---
-# Vert.x模板项目结构
 
-本项目是基于Vert.x的模板项目，使用JDK21虚拟线程构建的响应式Web应用。
+# Vert.x项目开发规范
 
-## 项目入口
+本文档定义了基于Vert.x + JDK21虚拟线程的响应式Web应用开发规范。
 
-- [Run.java](mdc:src/main/java/com/vertx/template/Run.java) - 应用程序主入口，使用JDK21虚拟线程部署Verticle
-- [MainVerticle.java](mdc:src/main/java/com/vertx/template/MainVerticle.java) - 主Verticle，负责初始化配置和HTTP服务器
+## 📋 目录
 
-## 核心模块
+1. [项目架构](#项目架构)
+2. [编码规范](#编码规范)
+3. [技术栈规范](#技术栈规范)
+4. [开发流程](#开发流程)
 
-### 配置系统
-- [ConfigLoader.java](mdc:src/main/java/com/vertx/template/config/ConfigLoader.java) - 配置加载器，从YAML加载配置
-- [config.yml](mdc:src/main/resources/config.yml) - YAML配置文件
+---
 
-### 路由系统
-- [RouterRegistry.java](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java) - 路由注册中心，集中管理所有路由
-- [RouteGroup.java](mdc:src/main/java/com/vertx/template/router/RouteGroup.java) - 路由组接口，定义统一的路由注册规范
-- [GlobalMiddleware.java](mdc:src/main/java/com/vertx/template/router/GlobalMiddleware.java) - 全局中间件，处理跨域、请求日志等
+## 项目架构
 
-### MVC组件
-- [UserController.java](mdc:src/main/java/com/vertx/template/controller/UserController.java) - 用户控制器
-- [UserService.java](mdc:src/main/java/com/vertx/template/service/UserService.java) - 用户服务接口
-- [UserServiceImpl.java](mdc:src/main/java/com/vertx/template/service/UserServiceImpl.java) - 用户服务实现
+### 核心组件结构
 
-### 路由定义
-- [UserRoutes.java](mdc:src/main/java/com/vertx/template/routes/UserRoutes.java) - 用户相关路由
-
-### 其他组件
-- [ApiResponse.java](mdc:src/main/java/com/vertx/template/model/ApiResponse.java) - API响应模型
-- [BusinessException.java](mdc:src/main/java/com/vertx/template/exception/BusinessException.java) - 业务异常类
-- [logback.xml](mdc:src/main/resources/logback.xml) - 日志配置文件
-
-## 启动脚本
-- [run.bat](mdc:run.bat) - Windows启动脚本
-- [run.sh](mdc:run.sh) - Linux/Mac启动脚本
-
-# JDK21虚拟线程与Future.await使用指南
-
-本项目充分利用JDK21虚拟线程特性，使用`Future.await()`方法简化异步代码。
-
-## 核心用法
-
-在项目中，我们使用虚拟线程和`Future.await()`方法将异步代码转换为同步风格：
-
-```java
-// 使用await直接获取结果，而不是使用回调
-JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
-
-// 直接获取服务结果
-List<User> users = Future.await(userService.getUsers());
+```
+src/main/java/com/vertx/template/
+├── Run.java                    # 应用入口
+├── MainVerticle.java           # 主Verticle
+├── config/
+│   └── ConfigLoader.java       # 配置加载器
+├── controller/                 # 控制器层
+├── service/                    # 服务层
+├── model/                      # 数据模型
+├── router/                     # 路由系统
+├── handler/                    # 处理器
+└── exception/                  # 异常定义
 ```
 
-## 关键文件
+### MVC架构层次
 
-以下文件展示了不同情境下的`Future.await()`使用方式：
+| 层级           | 职责                               | 示例文件                        |
+| -------------- | ---------------------------------- | ------------------------------- |
+| **Controller** | 接收HTTP请求，参数验证，调用服务层 | `UserController.java`           |
+| **Service**    | 业务逻辑处理，数据转换             | `UserService.java`              |
+| **Repository** | 数据访问，外部API调用              | `UserRepository.java`           |
+| **Model**      | 数据结构定义，DTO对象              | `User.java`, `ApiResponse.java` |
+| **Router**     | 路由定义和注册                     | `UserRoutes.java`               |
 
-- [MainVerticle.java](mdc:src/main/java/com/vertx/template/MainVerticle.java) - 在Verticle启动流程中使用await
-- [ConfigLoader.java](mdc:src/main/java/com/vertx/template/config/ConfigLoader.java) - 在配置加载中使用await
-- [UserController.java](mdc:src/main/java/com/vertx/template/controller/UserController.java) - 在HTTP处理器中使用await
-- [Run.java](mdc:src/main/java/com/vertx/template/Run.java) - 应用程序入口使用虚拟线程模式
+---
 
-## 注意事项
+## 编码规范
 
-1. `Future.await()`只能在虚拟线程上调用，否则会抛出异常
-2. 项目已配置使用虚拟线程启动Verticle，所有处理器都可以安全使用`Future.await()`
-3. 使用try/catch处理异常，替代原有的`.onFailure()`处理方式
-4. 不需要显式创建或管理虚拟线程，框架已自动处理
+### 🔧 变量声明规则
 
-# 依赖注入使用指南
+#### 不可变性原则
+- **默认使用 `final`**：所有变量默认声明为 `final`
+- **集合类型**：优先使用不可变集合 `List.of()`, `Set.of()`, `Map.of()`
+- **可变集合**：使用线程安全实现 `ConcurrentHashMap`, `CopyOnWriteArrayList`
 
-本项目使用Google Guice进行依赖注入管理，简化组件间依赖关系。
-
-## 核心组件
-
-- [AppModule.java](mdc:src/main/java/com/vertx/template/di/AppModule.java) - Guice模块配置，定义所有依赖绑定
-- [RouterRegistry.java](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java) - 创建Injector并获取组件实例
-
-## 常见注解
-
-在代码中使用的主要注解：
-
-### @Inject
-用于标记依赖注入点，可以用在：
-- 构造函数上：`@Inject public UserController(UserService service) {...}`
-- 字段上：`@Inject private UserService service;`
-
-### @Singleton
-将组件标记为单例，确保只创建一个实例：
 ```java
-@Singleton
-public class UserServiceImpl implements UserService {...}
+// ✅ 推荐
+final String userId = "123";
+final List<String> names = List.of("Alice", "Bob");
+final Map<String, Object> config = Map.of("port", 8080);
+
+// ❌ 避免
+String userId = "123";  // 缺少final
+ArrayList<String> names = new ArrayList<>();  // 非线程安全
 ```
 
-或在绑定时指定：
-```java
-bind(UserService.class).to(UserServiceImpl.class).in(Singleton.class);
-```
+#### 命名约定
+| 类型     | 规则           | 示例                            |
+| -------- | -------------- | ------------------------------- |
+| 局部变量 | 小驼峰         | `userId`, `productName`         |
+| 常量     | 全大写+下划线  | `MAX_RETRY_COUNT`               |
+| 成员变量 | 小驼峰，无前缀 | `userService`, `config`         |
+| 类名     | 大驼峰         | `UserController`, `ApiResponse` |
 
-### @Provides
-在模块中提供工厂方法创建复杂对象：
+### 🏗️ 方法设计规范
+
+#### 设计原则
+- **行数限制**：方法最大30行
+- **参数限制**：最多3个参数，超过使用DTO对象
+- **单一职责**：一个方法只做一件事
+- **返回类型**：异步方法返回 `Future<T>`
+
 ```java
-@Provides
-@Singleton
-Router provideRouter() {
-  return Router.router(vertx);
+// ✅ 推荐
+public Future<User> getUserById(final String id) {
+    return userRepository.findById(id)
+        .compose(this::validateUser)
+        .map(this::enrichUserData);
+}
+
+// ❌ 避免
+public void processUser(String id, String name, String email,
+                       boolean active, Date created) { // 参数过多
+    // 方法过长...
 }
 ```
 
-## 依赖注入示例
+### 🔄 异步编程规范
 
-- [UserController.java](mdc:src/main/java/com/vertx/template/controller/UserController.java) - 注入UserService接口
-- [UserRoutes.java](mdc:src/main/java/com/vertx/template/routes/UserRoutes.java) - 注入UserController
-- [GlobalMiddleware.java](mdc:src/main/java/com/vertx/template/router/GlobalMiddleware.java) - 注入Vertx、Router和配置
+#### 异步方法规范
+| 规则     | 说明                         | 示例                                         |
+| -------- | ---------------------------- | -------------------------------------------- |
+| 方法命名 | 异步方法以`Async`结尾        | `getUserAsync()`, `saveDataAsync()`          |
+| 返回类型 | 必须返回`Future<T>`          | `Future<User>`, `Future<List<Order>>`        |
+| 调用方式 | 使用`Future.await()`同步调用 | `User user = Future.await(getUserAsync(id))` |
 
-## 添加新服务步骤
-
-1. 创建服务接口和实现类，并在实现类上添加`@Inject`构造函数
-2. 在AppModule中添加绑定：`bind(NewService.class).to(NewServiceImpl.class).in(Singleton.class);`
-3. 在需要使用的地方通过构造函数注入：`@Inject public MyClass(NewService service) {...}`
-
-# API响应处理机制
-
-本项目实现了统一的API响应处理机制，简化了控制器代码并确保一致的响应格式。
-
-## 核心组件
-
-### 响应处理器
-- [ResponseHandler.java](mdc:src/main/java/com/vertx/template/handler/ResponseHandler.java) - 统一响应处理器，自动将返回数据包装为标准响应格式
-  - 支持直接返回业务数据，自动包装为`ApiResponse`
-  - 自动处理异常，转换为友好的错误响应
-  - 简化控制器代码，减少模板代码
-
-### 全局异常处理器
-- [GlobalExceptionHandler.java](mdc:src/main/java/com/vertx/template/handler/GlobalExceptionHandler.java) - 全局异常处理，确保所有未捕获的异常都能得到妥善处理
-  - 区分业务异常和系统异常
-  - 统一异常日志记录
-  - 返回友好的错误消息
-
-### 响应模型
-- [ApiResponse.java](mdc:src/main/java/com/vertx/template/model/ApiResponse.java) - 统一的API响应模型
-  - 包含状态码、消息和数据
-  - 提供了便捷的静态工厂方法创建成功/失败响应
-
-### 业务异常
-- [BusinessException.java](mdc:src/main/java/com/vertx/template/exception/BusinessException.java) - 业务异常类
-  - 包含错误码和错误消息
-  - 用于表示可预期的业务逻辑错误
-
-## 使用方式
-
-在控制器中使用`ResponseHandler`处理响应：
-
+#### 异步方法示例
 ```java
-public Handler<RoutingContext> getUsers() {
-  return responseHandler.handle(ctx -> {
-    // 直接返回业务数据，ResponseHandler会自动包装和序列化
-    return Future.await(userService.getUsers());
-  });
+// 异步方法定义
+public Future<User> getUserAsync(String id) {
+    return vertx.executeBlocking(promise -> {
+        User user = userRepository.findById(id);
+        promise.complete(user);
+    });
+}
+
+// 异步方法调用
+public User getUser(String id) {
+    return Future.await(getUserAsync(id));
 }
 ```
 
-抛出业务异常示例：
+### 🚨 异常处理规范
 
+#### 异常分层策略
+| 异常类型                | 用途         | 处理方式                   | HTTP状态码 |
+| ----------------------- | ------------ | -------------------------- | ---------- |
+| **SystemException**     | 系统技术错误 | 记录详细日志，返回通用错误 | 500        |
+| **BusinessException**   | 业务逻辑错误 | 记录简要日志，返回具体错误 | 400-499    |
+| **ValidationException** | 参数验证失败 | 返回具体验证错误信息       | 400        |
+
+#### 异常类层次结构
+```
+RuntimeException
+├── SystemException (系统异常)
+│   ├── DatabaseException (数据库异常)
+│   ├── NetworkException (网络异常)
+│   └── ConfigurationException (配置异常)
+├── BusinessException (业务异常)
+│   ├── UserNotFoundException (用户不存在)
+│   ├── InsufficientPermissionException (权限不足)
+│   └── DuplicateResourceException (资源重复)
+└── ValidationException (验证异常)
+    ├── InvalidParameterException (参数无效)
+    └── MissingParameterException (参数缺失)
+```
+
+#### 异常使用示例
 ```java
-if (id == null || id.trim().isEmpty()) {
-  throw new BusinessException(400, "User ID is required");
+// Service层 - 业务异常
+public Future<User> getUserByIdAsync(String id) {
+    if (StringUtils.isBlank(id)) {
+        throw new ValidationException("用户ID不能为空");
+    }
+
+    User user = userRepository.findById(id);
+    if (user == null) {
+        throw new BusinessException(404, "用户不存在: " + id);
+    }
+
+    return Future.succeededFuture(user);
+}
+
+// Controller层 - 异常自动处理
+@GetMapping("/:id")
+public User getUserById(@PathParam("id") String id) {
+    return Future.await(userService.getUserByIdAsync(id));
 }
 ```
 
-# Vert.x 项目编码规范
-
-本规范定义了项目的Java代码风格、结构和最佳实践。
-
-## 变量声明规则
-
-### 变量不可变性
-- 所有变量默认声明为 `final`，例如：`final String id = "123";`
-- 只有在确实需要修改变量值时才省略 `final`
-- 示例见 [CodeStyleExample.java](mdc:src/main/java/com/vertx/template/examples/CodeStyleExample.java)
-
-### 集合类型
-- 优先使用不可变集合：`List.of()`, `Set.of()`, `Map.of()`
-- 需要可修改的集合时使用线程安全实现：`ConcurrentHashMap`, `CopyOnWriteArrayList`
-
-### 命名约定
-- 局部变量：驼峰式，如 `userId`, `productName`
-- 常量：全大写+下划线，如 `MAX_RETRY_COUNT`
-- 成员变量：不使用前缀，直接驼峰式
-
-## 方法设计规范
-
-### 方法设计原则
-- 方法应当短小精悍，最大行数控制在30行以内
-- 单一职责原则：一个方法只做一件事
-- 参数数量控制在3个以内，超过时使用DTO对象
-
-### 异步方法规范
-- 返回 `Future<T>` 而非使用回调
-- 使用 `Promise` 创建 `Future`
-- 参考 [AnnotationRouterHandler.java](mdc:src/main/java/com/vertx/template/router/handler/AnnotationRouterHandler.java) 中的异步处理模式
-
-## 异常处理
-
-### 异常基类
-- 业务异常统一继承 [BusinessException](mdc:src/main/java/com/vertx/template/exception/BusinessException.java)
-- 校验异常使用 [ValidationException](mdc:src/main/java/com/vertx/template/exception/ValidationException.java)
-
-### 异常处理原则
-- 不要捕获后不处理异常（避免空catch块）
-- 异常处理集中在 [ResponseHandler](mdc:src/main/java/com/vertx/template/handler/ResponseHandler.java)
-- 错误信息统一格式化并返回，客户端得到一致的错误响应
-
-## 路由与控制器规范
-
-### 路由定义
-- 使用注解定义路由，如 `@RestController`, `@GetMapping`
-- 路由分组参考 [RouterRegistry](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java)
-- 参数注解：`@PathParam`, `@QueryParam`, `@RequestBody` 等
-
-### 控制器设计
-- 控制器使用 `@RestController` 和 `@Singleton` 注解
-- 依赖注入使用 `@Inject`
-- 参考 [ProductController](mdc:src/main/java/com/vertx/template/controller/ProductController.java)
-
-## 响应式编程规范
-
-### Vert.x Best Practices
-- 避免阻塞操作，必要时使用 `vertx.executeBlocking()`
-- 利用 `Future` 的组合功能：`compose()`, `map()`, `flatMap()`
-- 避免嵌套 Future 回调，优先使用链式调用
-
-### 事件循环保护
-- 长时间操作必须放在专门的工作线程执行
-- 不要在事件循环中使用阻塞I/O或CPU密集型计算
-
-## 数据校验
-
-### Bean Validation
-- 实体类使用Jakarta Bean Validation注解
-- 示例参考 [Product](mdc:src/main/java/com/vertx/template/model/Product.java)
-- 校验执行由 [ValidationUtils](mdc:src/main/java/com/vertx/template/router/validation/ValidationUtils.java) 统一处理
-
-## 日志规范
+## 📝 日志记录规范
 
 ### 日志级别使用
-- ERROR: 影响系统运行的错误
-- WARN: 不影响系统但需要关注的异常情况
-- INFO: 重要业务事件和状态变化
-- DEBUG: 调试信息，生产环境通常不开启
+| 级别      | 用途                   | 示例场景                   |
+| --------- | ---------------------- | -------------------------- |
+| **ERROR** | 系统错误，需要立即关注 | 数据库连接失败、未捕获异常 |
+| **WARN**  | 警告信息，可能的问题   | 配置缺失、性能警告         |
+| **INFO**  | 重要的业务信息         | 用户登录、订单创建         |
+| **DEBUG** | 调试信息               | 方法调用、参数值           |
+| **TRACE** | 详细的跟踪信息         | 详细的执行流程             |
 
-### 日志内容
-- 包含关键标识信息如用户ID、请求ID
-- 敏感信息（如密码、令牌）必须脱敏后记录
+### 日志记录示例
+```java
+@Slf4j
+public class UserService {
 
-# MVC架构模式
+    public Future<User> createUserAsync(CreateUserRequest request) {
+        // INFO: 记录重要业务操作
+        log.info("Creating user with username: {}", request.getUsername());
 
-本项目采用扩展的MVC(Model-View-Controller)架构模式，结合响应式编程和依赖注入实现可维护、可测试的代码结构。
+        try {
+            // DEBUG: 记录详细处理步骤
+            log.debug("Validating user data: {}", request);
 
-## 架构层次
+            User user = userRepository.save(request.toUser());
 
-### 1. 控制器层 (Controller)
-- 负责接收HTTP请求并调用服务层
-- 处理参数验证和请求路由
-- 不包含业务逻辑，只负责协调
-- 示例：[UserController.java](mdc:src/main/java/com/vertx/template/controller/UserController.java)
+            // INFO: 记录操作结果
+            log.info("User created successfully with ID: {}", user.getId());
 
-### 2. 服务层 (Service)
-- 包含核心业务逻辑
-- 处理业务规则和数据转换
-- 返回Future对象实现异步操作
-- 接口与实现分离，便于测试和替换
-- 示例：
-  - [UserService.java](mdc:src/main/java/com/vertx/template/service/UserService.java) (接口)
-  - [UserServiceImpl.java](mdc:src/main/java/com/vertx/template/service/impl/UserServiceImpl.java) (实现)
+            return Future.succeededFuture(user);
+        } catch (Exception e) {
+            // ERROR: 记录错误信息
+            log.error("Failed to create user: {}", request.getUsername(), e);
+            throw e;
+        }
+    }
+}
+```
 
-### 3. 数据访问层 (Repository)
-- 负责与数据源交互（数据库、外部API等）
-- 提供数据的CRUD操作
-- 返回Future对象实现异步操作
-- 示例：`UserRepository.java`
+### 敏感信息处理
+```java
+// ❌ 避免：记录敏感信息
+log.info("User login: username={}, password={}", username, password);
 
-### 4. 模型层 (Model)
-- 定义数据结构和业务对象
-- POJO类、数据传输对象(DTO)
-- 示例：[User.java](mdc:src/main/java/com/vertx/template/model/User.java)
+// ✅ 推荐：脱敏处理
+log.info("User login: username={}, password=***", username);
+```
 
-### 5. 路由层 (Routes)
-- 定义API端点和HTTP方法
-- 将请求映射到控制器方法
-- 实现了RouteGroup接口的模块化设计
-- 示例：[UserRoutes.java](mdc:src/main/java/com/vertx/template/routes/UserRoutes.java)
+---
 
-## 数据流程
+## 技术栈规范
 
-1. 请求进入路由层（Routes）
-2. 路由将请求传递给控制器（Controller）
-3. 控制器验证请求并调用服务（Service）
-4. 服务执行业务逻辑，可能调用仓库（Repository）
-5. 服务返回结果（通过Future）给控制器
-6. 控制器通过ResponseHandler包装响应
-7. 响应返回给客户端
+### 🧵 JDK21虚拟线程
 
-## 最佳实践
+#### 核心特性
+- **Future.await()**：将异步代码转换为同步风格
+- **自动管理**：框架自动处理虚拟线程创建和管理
+- **性能优势**：高并发场景下显著提升性能
 
-- 控制器方法应该简短，主要负责参数验证和服务调用
-- 所有业务逻辑都应该放在服务层
-- 使用接口定义服务契约，实现依赖倒置原则
-- 使用Future处理异步操作，避免阻塞事件循环
-- 使用BusinessException表示可预期的业务错误
+```java
+// ✅ 推荐：使用Future.await()
+JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
+List<User> users = Future.await(userService.getUsers());
 
-# 路由模块设计指南
+// ❌ 避免：传统回调方式
+userService.getUsers().onSuccess(users -> {
+    // 回调嵌套
+}).onFailure(error -> {
+    // 错误处理
+});
+```
 
-本项目采用基于注解的路由设计，类似Spring Boot的路由定义方式，简化开发并提高代码可读性。
+#### 使用约束
+- `Future.await()` 只能在虚拟线程上调用
+- 使用 `try/catch` 处理异常，替代 `.onFailure()`
+- 所有HTTP处理器都可安全使用 `Future.await()`
 
-## 核心概念
+### 💉 依赖注入 (Google Guice)
 
-### 1. 路由注解
+#### 核心注解
+| 注解         | 用途       | 示例                                                 |
+| ------------ | ---------- | ---------------------------------------------------- |
+| `@Inject`    | 标记注入点 | `@Inject public UserController(UserService service)` |
+| `@Singleton` | 单例模式   | `@Singleton public class UserServiceImpl`            |
+| `@Provides`  | 工厂方法   | `@Provides Router provideRouter()`                   |
 
-使用以下注解定义路由：
+#### 配置步骤
+1. **创建服务**：定义接口和实现类
+2. **配置绑定**：在 `AppModule` 中添加绑定
+3. **注入使用**：通过构造函数注入依赖
 
-- `@RestController` - 标记一个类为REST控制器
-- `@RequestMapping` - 定义基础URL路径和HTTP方法
-- `@GetMapping`, `@PostMapping` 等 - 定义特定HTTP方法的路由
+```java
+// 1. 服务定义
+public interface UserService {
+    Future<List<User>> getUsers();
+}
 
-### 2. 参数注解
+@Singleton
+public class UserServiceImpl implements UserService {
+    @Inject
+    public UserServiceImpl(UserRepository repository) {
+        this.repository = repository;
+    }
+}
 
-使用以下注解定义方法参数：
+// 2. 模块配置
+public class AppModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        bind(UserService.class).to(UserServiceImpl.class);
+    }
+}
 
-- `@PathParam` - 获取路径参数，例如：`@PathParam("id") String id`
-- `@QueryParam` - 获取查询参数，例如：`@QueryParam("name") String name`
-- `@RequestBody` - 获取请求体并转换为对象，例如：`@RequestBody User user`
-- `@HeaderParam` - 获取请求头参数，例如：`@HeaderParam("Authorization") String token`
+// 3. 控制器注入
+@RestController
+@Singleton
+public class UserController {
+    @Inject
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+}
+```
 
-### 3. 参数校验
+### 🛣️ 路由系统 (注解驱动)
 
-使用Jakarta Bean Validation (JSR 380)进行参数校验：
+#### 路由注解
+| 注解              | 用途           | 示例                                  |
+| ----------------- | -------------- | ------------------------------------- |
+| `@RestController` | 标记REST控制器 | `@RestController`                     |
+| `@RequestMapping` | 定义基础路径   | `@RequestMapping("/api/users")`       |
+| `@GetMapping`     | GET请求映射    | `@GetMapping("/:id")`                 |
+| `@PostMapping`    | POST请求映射   | `@PostMapping("")`                    |
+| `@PathParam`      | 路径参数       | `@PathParam("id") String id`          |
+| `@QueryParam`     | 查询参数       | `@QueryParam("name") String name`     |
+| `@RequestBody`    | 请求体         | `@RequestBody User user`              |
+| `@Valid`          | 参数校验       | `@Valid @RequestBody Product product` |
 
-- `@Valid` - 标记需要校验的参数，例如：`@Valid @RequestBody Product product`
-- `@NotNull`, `@NotBlank`, `@Size`, `@Min` 等 - 定义校验规则
-
-### 4. 注解路由处理器
-
-[AnnotationRouterHandler](mdc:src/main/java/com/vertx/template/router/handler/AnnotationRouterHandler.java)负责：
-
-- 自动扫描带有@RestController注解的类
-- 处理各种路由注解并注册对应的处理器
-- 支持方法参数自动注入和类型转换
-- 支持请求参数校验
-- 自动处理返回值，支持直接返回数据对象
-
-### 5. 路由注册中心
-
-[RouterRegistry](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java)负责集中管理路由注册：
-
-- 创建并存储Guice注入器和主路由器
-- 注册全局中间件
-- 通过AnnotationRouterHandler注册基于注解的路由
-- 注册全局异常处理器
-- 提供统一的Router实例给HTTP服务器
-
-### 6. 全局中间件
-
-[GlobalMiddleware](mdc:src/main/java/com/vertx/template/router/GlobalMiddleware.java)负责处理通用中间件：
-
-- CORS配置
-- 请求体解析
-- 请求日志和计时
-- 其他全局处理逻辑
-
-### 7. 响应处理器
-
-[ResponseHandler](mdc:src/main/java/com/vertx/template/handler/ResponseHandler.java)负责统一处理响应：
-
-- 自动将返回数据包装成标准ApiResponse格式
-- 统一处理异常和错误响应，包括参数校验错误
-- 设置响应头和状态码
-
-## 实现示例
-
-### 基础控制器示例
-
+#### 控制器示例
 ```java
 @RestController
 @RequestMapping("/api/users")
@@ -398,175 +323,146 @@ public class UserController {
 
     @GetMapping("")
     public List<User> getUsers() {
-        // 直接返回数据对象，而不是Future
         return Future.await(userService.getUsers());
     }
 
     @GetMapping("/:id")
     public User getUserById(@PathParam("id") String id) {
-        // 使用PathParam注解获取路径参数
         return Future.await(userService.getUserById(id));
     }
-}
-```
-
-### 高级参数解析和校验示例
-
-```java
-@RestController
-@RequestMapping("/api/products")
-@Singleton
-public class ProductController {
-
-    @GetMapping("")
-    public List<Product> getAllProducts(
-            @QueryParam(value = "minPrice", required = false) Double minPrice,
-            @QueryParam(value = "maxPrice", required = false) Double maxPrice) {
-        // 支持多个查询参数，自动类型转换
-        // ...
-    }
 
     @PostMapping("")
-    public Product createProduct(@Valid @RequestBody Product product) {
-        // 请求体对象并进行校验
-        // ...
+    public User createUser(@Valid @RequestBody User user) {
+        return Future.await(userService.createUser(user));
     }
 }
 ```
 
-## 实体校验规则示例
+### 📡 API响应处理
 
+#### 统一响应格式
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { /* 业务数据 */ },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 核心组件
+- **ResponseHandler**：自动包装返回数据为标准格式
+- **GlobalExceptionHandler**：全局异常处理和日志记录
+- **ApiResponse**：统一响应模型
+- **BusinessException**：业务异常定义
+
+#### 使用方式
 ```java
-public class Product {
-
-    private String id;
-
-    @NotBlank(message = "产品名称不能为空")
-    @Size(min = 2, max = 50, message = "产品名称长度必须在2-50之间")
-    private String name;
-
-    @NotNull(message = "产品价格不能为空")
-    @Min(value = 0, message = "产品价格必须大于等于0")
-    private Double price;
-
-    // ...getter和setter
+// 控制器直接返回业务数据，自动包装
+public User getUserById(@PathParam("id") String id) {
+    if (StringUtils.isBlank(id)) {
+        throw new ValidationException("用户ID不能为空");
+    }
+    return Future.await(userService.getUserById(id));
 }
 ```
 
-## 添加新路由
+### 📊 数据验证规范
 
-添加新路由的步骤：
+#### Bean Validation注解
+| 注解        | 用途           | 示例                                       |
+| ----------- | -------------- | ------------------------------------------ |
+| `@NotNull`  | 不能为null     | `@NotNull String name`                     |
+| `@NotBlank` | 不能为空字符串 | `@NotBlank String username`                |
+| `@Size`     | 长度限制       | `@Size(min=3, max=20) String name`         |
+| `@Email`    | 邮箱格式       | `@Email String email`                      |
+| `@Pattern`  | 正则表达式     | `@Pattern(regexp="^[0-9]+$") String phone` |
+| `@Min/@Max` | 数值范围       | `@Min(0) @Max(100) Integer age`            |
 
-1. 创建控制器类并添加`@RestController`注解
-2. 添加`@RequestMapping`注解指定基础路径
-3. 使用`@GetMapping`、`@PostMapping`等注解定义具体路由方法
-4. 控制器方法直接返回数据对象，系统会自动包装成标准响应格式
-5. 添加`@Singleton`注解确保单例模式
-6. 使用`@Inject`注入所需依赖
-7. 路由将被自动扫描并注册
-
-示例：
+#### 验证示例
 ```java
-@RestController
-@RequestMapping("/api/products")
-@Singleton
-public class ProductController {
+// 请求DTO
+public class CreateUserRequest {
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 20, message = "用户名长度必须在3-20之间")
+    private String username;
 
-    private final ProductService productService;
+    @Email(message = "邮箱格式不正确")
+    @NotBlank(message = "邮箱不能为空")
+    private String email;
 
-    @Inject
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
+    @Min(value = 18, message = "年龄不能小于18岁")
+    private Integer age;
+}
 
-    @GetMapping("")
-    public List<Product> getAllProducts() {
-        // 直接返回数据，无需包装Future
-        return Future.await(productService.getAllProducts());
-    }
-
-    @PostMapping("")
-    public Product createProduct(RoutingContext ctx) {
-        // 解析请求体并直接返回创建的产品
-        Product product = ctx.getBodyAsJson().mapTo(Product.class);
-        return Future.await(productService.create(product));
-    }
-
-    @GetMapping("/:id")
-    public Product getProductById(RoutingContext ctx) {
-        String id = ctx.pathParam("id");
-        return Future.await(productService.getById(id));
-    }
+// 控制器使用
+@PostMapping("")
+public User createUser(@Valid @RequestBody CreateUserRequest request) {
+    return Future.await(userService.createUserAsync(request));
 }
 ```
 
-# YAML配置系统指南
+### ⚙️ 配置系统 (YAML)
 
-本项目使用Vert.x Config模块从YAML文件加载配置。
-
-## 配置文件结构
-
-主配置文件[config.yml](mdc:src/main/resources/config.yml)组织为多个部分：
-
+#### 配置文件结构
 ```yaml
-# 服务器配置
+# config.yml
 server:
   port: 8888
   host: localhost
 
-# 日志配置
 logging:
   enabled: true
-  request_log: true
   level: INFO
 
-# CORS配置
 cors:
   enabled: true
   allowed_origins: "*"
-  allowed_methods:
-    - GET
-    - POST
-    - PUT
-    - DELETE
-  allowed_headers:
-    - Content-Type
-    - Authorization
 ```
 
-## 配置加载
-
-[ConfigLoader](mdc:src/main/java/com/vertx/template/config/ConfigLoader.java)类负责加载和缓存配置：
-
+#### 配置加载
 ```java
-// 配置加载示例
+// 加载配置
 JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
 
-// 获取缓存的配置
-JsonObject cachedConfig = ConfigLoader.getConfig();
+// 获取配置值
+int port = config.getJsonObject("server").getInteger("port", 8888);
 ```
 
-## 配置使用
-
-在代码中访问配置的示例：
-
-```java
-// 获取服务器配置
-JsonObject serverConfig = config.getJsonObject("server", new JsonObject());
-int port = serverConfig.getInteger("port", 8888);
-String host = serverConfig.getString("host", "localhost");
-
-// 获取嵌套配置并提供默认值
-JsonObject corsConfig = config.getJsonObject("cors", new JsonObject());
-boolean corsEnabled = corsConfig.getBoolean("enabled", true);
-```
-
-## 配置优先级
-
-配置加载过程遵循以下优先级（从高到低）：
-
+#### 配置优先级
 1. 系统属性 (`-D`参数)
 2. 环境变量
-3. 配置文件 (config.yml)
+3. 配置文件 (`config.yml`)
 
-可以通过环境变量或系统属性覆盖任何YAML配置。
+---
+
+## 🏗️ 项目架构总结
+
+本项目采用现代化的Java技术栈，结合Vert.x的响应式特性和注解驱动的开发模式，实现高性能、易维护的Web应用。
+
+### 核心特性
+- **🚀 高性能**：基于Vert.x事件循环和虚拟线程
+- **📝 注解驱动**：类似Spring Boot的开发体验
+- **🔧 依赖注入**：Google Guice提供IoC容器
+- **⚡ 异步编程**：Future.await()简化异步调用
+- **🛡️ 统一异常处理**：全局异常处理和响应包装
+- **✅ 数据验证**：Bean Validation自动参数校验
+- **📊 结构化日志**：完善的日志记录规范
+- **⚙️ 配置管理**：YAML配置文件支持
+
+### 开发流程
+1. **定义实体模型**：创建带验证注解的POJO类
+2. **实现Repository**：数据访问层，处理数据库操作
+3. **编写Service**：业务逻辑层，处理核心业务
+4. **创建Controller**：控制器层，处理HTTP请求
+5. **配置路由**：自动扫描注册路由映射
+6. **异常处理**：全局异常处理器自动处理
+7. **响应包装**：统一的API响应格式
+
+### 最佳实践
+- 遵循单一职责原则，每层专注自己的职责
+- 使用依赖注入管理组件依赖关系
+- 采用异步编程模式提升性能
+- 实施完善的异常处理和日志记录
+- 通过Bean Validation确保数据质量
+- 使用配置文件管理应用参数
