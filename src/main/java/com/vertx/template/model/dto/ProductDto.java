@@ -1,30 +1,24 @@
-package com.vertx.template.model;
+package com.vertx.template.model.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/**
- * 产品实体类
- */
-public class Product {
+/** 产品数据传输对象 */
+public class ProductDto {
 
   private String id;
 
-  @NotBlank(message = "产品名称不能为空")
-  @Size(min = 2, max = 50, message = "产品名称长度必须在2-50之间")
-  private String name;
+  @NotBlank(message = "产品名称不能为空") @Size(min = 2, max = 50, message = "产品名称长度必须在2-50之间") private String name;
 
-  @NotNull(message = "产品价格不能为空")
-  @Min(value = 0, message = "产品价格必须大于等于0")
-  private Double price;
+  @NotNull(message = "产品价格不能为空") @Min(value = 0, message = "产品价格必须大于等于0") private Double price;
 
   private String description;
 
-  public Product() {}
+  public ProductDto() {}
 
-  public Product(String id, String name, Double price, String description) {
+  public ProductDto(String id, String name, Double price, String description) {
     this.id = id;
     this.name = name;
     this.price = price;

@@ -19,7 +19,7 @@ alwaysApply: false
 
 ## 项目架构
 
-### 核心组件结构
+### 核心组件结构（符合阿里巴巴Java开发规范）
 
 ```
 src/main/java/com/vertx/template/
@@ -27,23 +27,63 @@ src/main/java/com/vertx/template/
 ├── MainVerticle.java           # 主Verticle
 ├── config/
 │   └── ConfigLoader.java       # 配置加载器
-├── controller/                 # 控制器层
-├── service/                    # 服务层
-├── model/                      # 数据模型
+├── controller/                 # 控制器层（Web层）
+├── service/                    # 服务层（业务逻辑层）
+│   └── impl/                   # 服务实现类
+├── repository/                 # 数据访问层（持久层）
+│   └── impl/                   # 数据访问实现类
+├── model/                      # 数据模型层
+│   ├── dto/                    # 数据传输对象（Data Transfer Object）
+│   ├── entity/                 # 数据库实体对象
+│   ├── vo/                     # 视图对象（View Object）
+│   └── bo/                     # 业务对象（Business Object）
 ├── router/                     # 路由系统
 ├── handler/                    # 处理器
-└── exception/                  # 异常定义
+├── exception/                  # 异常定义
+├── enums/                      # 枚举类
+├── constants/                  # 常量定义
+└── utils/                      # 工具类
 ```
 
-### MVC架构层次
+### 阿里巴巴分层架构规范
 
-| 层级           | 职责                               | 示例文件                        |
-| -------------- | ---------------------------------- | ------------------------------- |
-| **Controller** | 接收HTTP请求，参数验证，调用服务层 | `UserController.java`           |
-| **Service**    | 业务逻辑处理，数据转换             | `UserService.java`              |
-| **Repository** | 数据访问，外部API调用              | `UserRepository.java`           |
-| **Model**      | 数据结构定义，DTO对象              | `User.java`, `ApiResponse.java` |
-| **Router**     | 路由定义和注册                     | `UserRoutes.java`               |
+#### 分层领域模型规约
+
+| 层级                     | 说明                                                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **开放API层**            | 可直接封装Service接口暴露成RPC接口；通过Web封装成http接口；网关控制层等                                                                                                            |
+| **终端显示层**           | 各个端的模板渲染并执行显示的层。当前主要是velocity渲染，JS渲染，JSP渲染，移动端展示等                                                                                              |
+| **Web层**                | 主要是对访问控制进行转发，各类基本参数校验，或者不复用的业务简单处理等                                                                                                             |
+| **Service层**            | 相对具体的业务逻辑服务层                                                                                                                                                           |
+| **Manager层**            | 通用业务处理层，它有如下特征：1）对第三方平台封装的层，预处理返回结果及转化异常信息；2）对Service层通用能力的下沉，如缓存方案、中间件通用处理；3）与DAO层交互，对多个DAO的组合复用 |
+| **DAO层**                | 数据访问层，与底层MySQL、Oracle、Hbase等进行数据交互                                                                                                                               |
+| **外部接口或第三方平台** | 包括其它部门RPC开放接口，基础平台，其它公司的HTTP接口                                                                                                                              |
+
+### 分层架构职责（符合阿里巴巴规范）
+
+| 层级           | 职责                               | 示例文件                           | 阿里规范对应层 |
+| -------------- | ---------------------------------- | ---------------------------------- | -------------- |
+| **Controller** | 接收HTTP请求，参数验证，调用服务层 | `UserController.java`              | Web层          |
+| **Service**    | 业务逻辑处理，数据转换             | `UserService.java`                 | Service层      |
+| **Repository** | 数据访问，外部API调用              | `UserRepository.java`              | DAO层          |
+| **DTO**        | 数据传输对象，用于层间数据传递     | `UserDto.java`, `ApiResponse.java` | 领域模型       |
+| **Entity**     | 数据库实体对象，与数据表对应       | `User.java`, `Product.java`        | 领域模型       |
+| **VO**         | 视图对象，用于前端展示             | `UserVo.java`                      | 领域模型       |
+| **BO**         | 业务对象，封装业务逻辑             | `UserBo.java`                      | 领域模型       |
+| **Router**     | 路由定义和注册                     | `UserRoutes.java`                  | Web层          |
+
+### 领域模型命名规范
+
+#### 数据对象命名约定
+| 对象类型     | 命名规则    | 说明                             | 示例                                  |
+| ------------ | ----------- | -------------------------------- | ------------------------------------- |
+| **DTO**      | XxxDto      | 数据传输对象，用于接口间数据传递 | `UserDto.java`, `ProductDto.java`     |
+| **Entity**   | Xxx         | 数据库实体对象，与数据表一一对应 | `User.java`, `Product.java`           |
+| **VO**       | XxxVo       | 视图对象，用于前端展示           | `UserVo.java`, `ProductVo.java`       |
+| **BO**       | XxxBo       | 业务对象，封装业务逻辑的对象     | `UserBo.java`, `ProductBo.java`       |
+| **Query**    | XxxQuery    | 查询参数对象                     | `UserQuery.java`, `ProductQuery.java` |
+| **Request**  | XxxRequest  | 请求参数对象                     | `CreateUserRequest.java`              |
+| **Response** | XxxResponse | 响应结果对象                     | `UserResponse.java`                   |
 
 ---
 
@@ -67,13 +107,145 @@ String userId = "123";  // 缺少final
 ArrayList<String> names = new ArrayList<>();  // 非线程安全
 ```
 
-#### 命名约定
-| 类型     | 规则           | 示例                            |
-| -------- | -------------- | ------------------------------- |
-| 局部变量 | 小驼峰         | `userId`, `productName`         |
-| 常量     | 全大写+下划线  | `MAX_RETRY_COUNT`               |
-| 成员变量 | 小驼峰，无前缀 | `userService`, `config`         |
-| 类名     | 大驼峰         | `UserController`, `ApiResponse` |
+#### 命名约定（符合阿里巴巴Java开发规范）
+
+##### 基础命名规则
+| 类型     | 规则           | 示例                            | 阿里规范说明                                         |
+| -------- | -------------- | ------------------------------- | ---------------------------------------------------- |
+| 局部变量 | 小驼峰         | `userId`, `productName`         | 必须使用lowerCamelCase风格                           |
+| 常量     | 全大写+下划线  | `MAX_RETRY_COUNT`               | 常量命名全部大写，单词间用下划线隔开                 |
+| 成员变量 | 小驼峰，无前缀 | `userService`, `config`         | 不允许任何未定义规范的前缀                           |
+| 类名     | 大驼峰         | `UserController`, `ApiResponse` | 必须使用UpperCamelCase风格                           |
+| 方法名   | 小驼峰         | `getUserById`, `createUser`     | 必须使用lowerCamelCase风格                           |
+| 包名     | 全小写         | `com.vertx.template.service`    | 全部小写，点分隔符之间有且仅有一个自然语义的英语单词 |
+
+##### 包命名规范
+| 包类型         | 命名规则                | 示例                              | 说明                |
+| -------------- | ----------------------- | --------------------------------- | ------------------- |
+| **基础包**     | `com.{公司}.{项目}`     | `com.vertx.template`              | 公司域名倒置+项目名 |
+| **控制器包**   | `{基础包}.controller`   | `com.vertx.template.controller`   | Web层控制器         |
+| **服务包**     | `{基础包}.service`      | `com.vertx.template.service`      | 业务逻辑层          |
+| **服务实现包** | `{基础包}.service.impl` | `com.vertx.template.service.impl` | 服务实现类          |
+| **数据访问包** | `{基础包}.repository`   | `com.vertx.template.repository`   | 数据访问层          |
+| **实体包**     | `{基础包}.model.entity` | `com.vertx.template.model.entity` | 数据库实体          |
+| **DTO包**      | `{基础包}.model.dto`    | `com.vertx.template.model.dto`    | 数据传输对象        |
+| **VO包**       | `{基础包}.model.vo`     | `com.vertx.template.model.vo`     | 视图对象            |
+| **BO包**       | `{基础包}.model.bo`     | `com.vertx.template.model.bo`     | 业务对象            |
+| **枚举包**     | `{基础包}.enums`        | `com.vertx.template.enums`        | 枚举类              |
+| **常量包**     | `{基础包}.constants`    | `com.vertx.template.constants`    | 常量定义            |
+| **工具包**     | `{基础包}.utils`        | `com.vertx.template.utils`        | 工具类              |
+| **异常包**     | `{基础包}.exception`    | `com.vertx.template.exception`    | 异常定义            |
+
+##### 类命名特殊规范
+| 类型       | 命名规则               | 示例                                         | 说明                                           |
+| ---------- | ---------------------- | -------------------------------------------- | ---------------------------------------------- |
+| **抽象类** | Abstract开头或Base开头 | `AbstractUserService`, `BaseEntity`          | 抽象类命名使用Abstract或Base开头               |
+| **异常类** | Exception结尾          | `UserNotFoundException`, `BusinessException` | 异常类命名使用Exception结尾                    |
+| **测试类** | Test结尾               | `UserServiceTest`, `UserControllerTest`      | 测试类命名以它要测试的类的名称开始，以Test结尾 |
+| **工具类** | Utils或Helper结尾      | `StringUtils`, `DateHelper`                  | 工具类命名使用Utils或Helper结尾                |
+| **配置类** | Config结尾             | `DatabaseConfig`, `RedisConfig`              | 配置类命名使用Config结尾                       |
+| **常量类** | Constants结尾          | `UserConstants`, `SystemConstants`           | 常量类命名使用Constants结尾                    |
+
+##### 代码格式规范（阿里巴巴规范）
+
+###### 缩进与空格
+- **缩进**：使用4个空格，禁止使用tab字符
+- **大括号**：左大括号前不换行，左大括号后换行；右大括号前换行，右大括号后还有else等代码则不换行
+- **小括号**：左小括号和字符之间不出现空格；右小括号和字符之间也不出现空格
+- **运算符**：任何二目、三目运算符的左右两边都需要加一个空格
+
+```java
+// 正确示例
+if (condition) {
+    doSomething();
+} else {
+    doOtherThing();
+}
+
+// 运算符空格
+int result = a + b * c;
+boolean flag = (x > 0) && (y < 10);
+```
+
+###### 换行规范
+- **方法参数**：在逗号后进行换行，在运算符前换行
+- **点号**：在点号前换行，如：`StringBuffer.append(str).append(str2)`
+- **方法调用**：超过120个字符需要换行
+
+```java
+// 方法参数换行
+public void method(String param1,
+                  String param2,
+                  String param3) {
+    // 方法体
+}
+
+// 链式调用换行
+StringBuffer sb = new StringBuffer()
+    .append("Hello")
+    .append(" ")
+    .append("World");
+```
+
+##### 注释规范（阿里巴巴规范）
+
+###### 类注释
+```java
+/**
+ * 用户服务实现类
+ *
+ * @author 开发者姓名
+ * @since 1.0.0
+ */
+public class UserServiceImpl implements UserService {
+    // 类实现
+}
+```
+
+###### 方法注释
+```java
+/**
+ * 根据用户ID获取用户信息
+ *
+ * @param userId 用户ID，不能为空
+ * @return 用户信息，如果用户不存在返回null
+ * @throws IllegalArgumentException 当userId为空时抛出
+ */
+public UserDto getUserById(String userId) {
+    // 方法实现
+}
+```
+
+###### 字段注释
+```java
+/**
+ * 用户服务，用于处理用户相关业务逻辑
+ */
+private final UserService userService;
+
+/** 最大重试次数 */
+private static final int MAX_RETRY_COUNT = 3;
+```
+
+###### 特殊注释规范
+- **TODO注释**：标记待办事项，格式：`// TODO: [日期][处理人] 具体描述`
+- **FIXME注释**：标记需要修复的问题，格式：`// FIXME: [日期][处理人] 问题描述`
+- **废弃注释**：使用`@Deprecated`注解，并说明替代方案
+
+```java
+// TODO: 2024-01-15 张三 需要添加参数验证
+public void createUser(UserDto user) {
+    // 实现
+}
+
+/**
+ * @deprecated 该方法已废弃，请使用 {@link #getUserById(String)} 替代
+ */
+@Deprecated
+public User getUser(String id) {
+    return getUserById(id);
+}
+```
 
 ### 🏗️ 方法设计规范
 
@@ -523,6 +695,7 @@ int port = config.getJsonObject("server").getInteger("port", 8888);
 - **🗄️ 数据库映射**：基于注解的ORM映射，约定优于配置
 - **📊 结构化日志**：完善的日志记录规范
 - **⚙️ 配置管理**：YAML配置文件支持
+- **📋 阿里巴巴规范**：严格遵循阿里巴巴Java开发手册
 
 ### 开发流程
 1. **定义实体模型**：创建带验证注解的POJO类
@@ -533,10 +706,51 @@ int port = config.getJsonObject("server").getInteger("port", 8888);
 6. **异常处理**：全局异常处理器自动处理
 7. **响应包装**：统一的API响应格式
 
-### 最佳实践
-- 遵循单一职责原则，每层专注自己的职责
-- 使用依赖注入管理组件依赖关系
-- 采用异步编程模式提升性能
-- 实施完善的异常处理和日志记录
-- 通过Bean Validation确保数据质量
-- 使用配置文件管理应用参数
+### 阿里巴巴Java开发规范最佳实践
+
+#### 编程规约
+- **命名风格**：严格遵循驼峰命名法，包名全小写，类名大驼峰，方法名小驼峰
+- **常量定义**：不允许任何魔法值直接出现在代码中，必须定义有意义的常量
+- **代码格式**：使用4个空格缩进，禁用tab字符，行宽不超过120字符
+- **OOP规约**：避免通过一个类的对象引用访问此类的静态变量或静态方法
+- **集合处理**：使用entrySet()遍历Map类集合，不要使用keySet()方式遍历
+
+#### 异常处理
+- **异常设计**：异常不要用来做流程控制，条件控制
+- **异常捕获**：有try块放到了事务代码中，catch异常后，如果需要回滚事务，一定要注意手动回滚事务
+- **异常抛出**：方法的返回值可以为null，不强制返回空集合，或者空对象等，必须添加注释充分说明什么情况下会返回null值
+
+#### 日志规约
+- **日志级别**：应用中不可直接使用日志系统（Log4j、Logback）中的API，而应依赖使用日志框架SLF4J中的API
+- **日志格式**：日志格式统一，便于日志分析和问题排查
+- **敏感信息**：避免重复打印日志，浪费磁盘空间，务必在log4j.xml中设置additivity=false
+
+#### 单元测试
+- **测试覆盖率**：单元测试代码必须写在如下工程目录：src/test/java，不允许写在业务代码目录下
+- **测试方法**：单元测试方法名要求：test[Method]_[Scenario]_[ExpectedBehavior]
+- **断言使用**：单元测试中不准使用System.out来进行人肉验证，必须使用assert来验证
+
+#### 安全规约
+- **SQL注入**：页面传递参数必须进行校验，因为SQL注入不仅仅是web安全问题，也是数据库安全问题
+- **XSS防护**：在使用平台资源，譬如短信、邮件、电话、下单、支付，必须实现正确的防重放的机制
+- **权限控制**：表单、AJAX提交必须执行CSRF安全验证
+
+#### MySQL数据库规约
+- **建表规约**：表达是与否概念的字段，必须使用is_xxx的方式命名，数据类型是unsigned tinyint
+- **索引规约**：业务上具有唯一特性的字段，即使是多个字段的组合，也必须建成唯一索引
+- **SQL语句**：不要使用count(列名)或count(常量)来替代count(*)，count(*)是SQL92定义的标准统计行数的语法
+
+### 项目最佳实践
+- **遵循单一职责原则**：每个类和方法只负责一个功能
+- **使用异步编程模式**：充分利用Vert.x的异步特性
+- **实施统一的错误处理**：全局异常处理和统一响应格式
+- **保持代码简洁和可读性**：遵循阿里巴巴代码格式规范
+- **编写完整的文档和注释**：按照JavaDoc规范编写注释
+- **严格的代码审查**：确保代码质量和规范遵循
+- **持续集成和部署**：自动化测试和部署流程
+
+### 开发工具推荐
+- **IDE插件**：Alibaba Java Coding Guidelines（阿里巴巴Java开发规约插件）
+- **代码检查**：SonarQube进行代码质量检查
+- **格式化工具**：使用统一的代码格式化配置
+- **静态分析**：SpotBugs、PMD等静态代码分析工具

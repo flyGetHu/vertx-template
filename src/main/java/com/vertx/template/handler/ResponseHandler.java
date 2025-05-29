@@ -1,6 +1,6 @@
 package com.vertx.template.handler;
 
-import com.vertx.template.model.ApiResponse;
+import com.vertx.template.model.dto.ApiResponse;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;

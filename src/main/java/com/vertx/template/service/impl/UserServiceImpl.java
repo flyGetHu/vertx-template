@@ -1,13 +1,12 @@
 package com.vertx.template.service.impl;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import com.vertx.template.model.User;
+import com.vertx.template.model.dto.UserDto;
 import com.vertx.template.service.UserService;
-
 import io.vertx.core.Future;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 public class UserServiceImpl implements UserService {
@@ -18,15 +17,15 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public Future<List<User>> getUsers() {
-    List<User> users = new ArrayList<>();
-    users.add(new User("1", "Alice"));
-    users.add(new User("2", "Bob"));
+  public Future<List<UserDto>> getUsers() {
+    List<UserDto> users = new ArrayList<>();
+    users.add(new UserDto("1", "Alice"));
+    users.add(new UserDto("2", "Bob"));
     return Future.succeededFuture(users);
   }
 
   @Override
-  public Future<User> getUserById(String id) {
-    return Future.succeededFuture(new User(id, "User-" + id));
+  public Future<UserDto> getUserById(String id) {
+    return Future.succeededFuture(new UserDto(id, "User-" + id));
   }
 }

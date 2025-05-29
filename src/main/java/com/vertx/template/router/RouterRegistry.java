@@ -5,7 +5,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
 import com.vertx.template.handler.GlobalExceptionHandler;
-import com.vertx.template.model.ApiResponse;
+import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.router.handler.AnnotationRouterHandler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;

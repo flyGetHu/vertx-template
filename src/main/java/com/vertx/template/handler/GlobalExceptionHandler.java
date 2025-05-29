@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.ValidationException;
-import com.vertx.template.model.ApiResponse;
+import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.security.AuthenticationException;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;

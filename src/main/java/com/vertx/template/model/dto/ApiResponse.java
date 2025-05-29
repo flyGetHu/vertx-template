@@ -1,8 +1,8 @@
-package com.vertx.template.model;
+package com.vertx.template.model.dto;
 
-import lombok.Data;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
 
 @Data
 public class ApiResponse<T> {
@@ -33,10 +33,8 @@ public class ApiResponse<T> {
   /**
    * 添加额外信息
    *
-   * @param key
-   *          键
-   * @param value
-   *          值
+   * @param key 键
+   * @param value 值
    * @return 当前响应对象
    */
   public ApiResponse<T> setExtra(String key, Object value) {
