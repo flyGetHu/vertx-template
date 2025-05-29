@@ -1,6 +1,7 @@
 package com.vertx.template.repository;
 
 import com.vertx.template.model.entity.User;
+import com.vertx.template.repository.common.BaseRepository;
 import java.util.List;
 
 /** 用户仓库接口，定义与用户相关的数据操作 */

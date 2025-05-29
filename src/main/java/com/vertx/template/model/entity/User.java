@@ -1,5 +1,8 @@
 package com.vertx.template.model.entity;
 
+import com.vertx.template.annotation.Column;
+import com.vertx.template.annotation.Id;
+import com.vertx.template.annotation.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -10,8 +13,9 @@ import lombok.EqualsAndHashCode;
 /** 用户实体类 */
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Table("users")
 public class User extends BaseEntity {
-  private Long id;
+  @Id private Long id;
 
   @NotBlank(message = "用户名不能为空") @Size(min = 3, max = 50, message = "用户名长度必须在3-50之间") private String username;
 
@@ -19,8 +23,12 @@ public class User extends BaseEntity {
 
   @Email(message = "邮箱格式不正确") private String email;
 
+  @Column(value = "created_at", updatable = false)
   private LocalDateTime createdAt;
+
+  @Column("updated_at")
   private LocalDateTime updatedAt;
+
   private boolean active;
 
   /**

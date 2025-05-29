@@ -1,0 +1,293 @@
+package com.vertx.template.repository.common;
+
+import com.vertx.template.annotation.Column;
+import com.vertx.template.annotation.Id;
+import com.vertx.template.annotation.Table;
+import com.vertx.template.model.entity.BaseEntity;
+import io.vertx.core.Future;
+import io.vertx.sqlclient.Pool;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.Tuple;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * 基础仓库抽象实现类，提供通用CRUD操作的默认实现
+ *
+ * @param <T> 实体类型，必须继承BaseEntity
+ * @param <ID> 主键类型
+ */
+public abstract class AbstractBaseRepository<T extends BaseEntity, ID>
+    implements BaseRepository<T, ID> {
+
+  private static final Logger logger = LoggerFactory.getLogger(AbstractBaseRepository.class);
+
+  protected final Pool pool;
+  protected final Class<T> entityClass;
+  protected final String tableName;
+
+  @SuppressWarnings("unchecked")
+  public AbstractBaseRepository(Pool pool) {
+    this.pool = pool;
+    // 通过反射获取实体类型
+    this.entityClass =
+        (Class<T>)
+            ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+    // 根据类名生成表名（可以通过注解或其他方式自定义）
+    this.tableName = getTableName();
+  }
+
+  /**
+   * 获取表名，直接使用@Table注解定义的名称，不做额外处理 如果没有@Table注解，使用类名转换
+   *
+   * @return 表名
+   */
+  protected String getTableName() {
+    final Table tableAnnotation = entityClass.getAnnotation(Table.class);
+    if (tableAnnotation != null) {
+      // 直接使用注解中定义的表名，不做额外处理
+      return !tableAnnotation.name().isEmpty() ? tableAnnotation.name() : tableAnnotation.value();
+    }
+
+    // 如果没有@Table注解，使用类名转换
+    final String className = entityClass.getSimpleName();
+    return camelToSnake(className) + "s"; // 简单的复数形式
+  }
+
+  @Override
+  public List<T> findAll() {
+    final String sql = "SELECT * FROM " + tableName;
+
+    final RowSet<Row> rows = Future.await(pool.query(sql).execute());
+
+    final List<T> entities = new ArrayList<>();
+    for (Row row : rows) {
+      entities.add(fromRow(row));
+    }
+    return entities;
+  }
+
+  @Override
+  public T findById(ID id) {
+    final String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
+
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(id)));
+
+    return rows.size() > 0 ? fromRow(rows.iterator().next()) : null;
+  }
+
+  @Override
+  public T save(T entity) {
+    // 设置创建和更新时间
+    final LocalDateTime now = LocalDateTime.now();
+    setFieldValue(entity, "createdAt", now);
+    setFieldValue(entity, "updatedAt", now);
+
+    final String sql = buildInsertSql();
+    final Tuple params = buildInsertParams(entity);
+
+    Future.await(pool.preparedQuery(sql).execute(params));
+
+    // 获取自增ID
+    final RowSet<Row> idResult = Future.await(pool.query("SELECT LAST_INSERT_ID()").execute());
+    if (idResult.size() > 0) {
+      final Long id = idResult.iterator().next().getLong(0);
+      setFieldValue(entity, "id", id);
+    }
+
+    return entity;
+  }
+
+  @Override
+  public T update(ID id, T entity) {
+    setFieldValue(entity, "id", id);
+    setFieldValue(entity, "updatedAt", LocalDateTime.now());
+
+    final String sql = buildUpdateSql();
+    final Tuple params = buildUpdateParams(entity);
+
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(params));
+
+    return rows.rowCount() > 0 ? entity : null;
+  }
+
+  @Override
+  public Boolean deleteById(ID id) {
+    final String sql = "DELETE FROM " + tableName + " WHERE id = ?";
+
+    final RowSet<Row> rows = Future.await(pool.preparedQuery(sql).execute(Tuple.of(id)));
+
+    return rows.rowCount() > 0;
+  }
+
+  /**
+   * 将数据库行转换为实体对象 利用BaseEntity的fromRow方法
+   *
+   * @param row 数据库行
+   * @return 实体对象
+   */
+  protected T fromRow(Row row) {
+    return BaseEntity.fromRow(row, entityClass);
+  }
+
+  /**
+   * 构建插入SQL，子类必须实现
+   *
+   * @return 插入SQL语句
+   */
+  protected abstract String buildInsertSql();
+
+  /**
+   * 构建插入参数，子类必须实现
+   *
+   * @param entity 实体对象
+   * @return 插入参数
+   */
+  protected abstract Tuple buildInsertParams(T entity);
+
+  /**
+   * 构建更新SQL，子类必须实现
+   *
+   * @return 更新SQL语句
+   */
+  protected abstract String buildUpdateSql();
+
+  /**
+   * 构建更新参数，子类必须实现
+   *
+   * @param entity 实体对象
+   * @return 更新参数
+   */
+  protected abstract Tuple buildUpdateParams(T entity);
+
+  /**
+   * 使用反射设置字段值
+   *
+   * @param entity 实体对象
+   * @param fieldName 字段名
+   * @param value 字段值
+   */
+  private void setFieldValue(T entity, String fieldName, Object value) {
+    try {
+      Field field = entity.getClass().getDeclaredField(fieldName);
+      field.setAccessible(true);
+      field.set(entity, value);
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to set field {} on entity {}: {}",
+          fieldName,
+          entity.getClass().getSimpleName(),
+          e.getMessage());
+    }
+  }
+
+  /**
+   * 获取字段对应的数据库列名 默认使用驼峰转蛇形命名，只有特殊情况才使用@Column注解
+   *
+   * @param field 字段
+   * @return 列名
+   */
+  protected String getColumnName(Field field) {
+    final Column columnAnnotation = field.getAnnotation(Column.class);
+    if (columnAnnotation != null) {
+      // 有@Column注解时，直接使用注解中定义的列名
+      return !columnAnnotation.name().isEmpty()
+          ? columnAnnotation.name()
+          : columnAnnotation.value();
+    }
+
+    // 默认使用驼峰转蛇形命名
+    return camelToSnake(field.getName());
+  }
+
+  /**
+   * 获取所有可插入的字段列名
+   *
+   * @return 列名列表
+   */
+  protected List<String> getInsertableColumns() {
+    return Arrays.stream(entityClass.getDeclaredFields())
+        .filter(
+            field -> {
+              final Column column = field.getAnnotation(Column.class);
+              final Id id = field.getAnnotation(Id.class);
+              // 排除主键字段（如果是自动生成的）和不可插入的字段
+              if (id != null && id.generated()) {
+                return false;
+              }
+              if (column != null && !column.insertable()) {
+                return false;
+              }
+              return true;
+            })
+        .map(this::getColumnName)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * 获取所有可更新的字段列名
+   *
+   * @return 列名列表
+   */
+  protected List<String> getUpdatableColumns() {
+    return Arrays.stream(entityClass.getDeclaredFields())
+        .filter(
+            field -> {
+              final Column column = field.getAnnotation(Column.class);
+              final Id id = field.getAnnotation(Id.class);
+              // 排除主键字段和不可更新的字段
+              if (id != null) {
+                return false;
+              }
+              if (column != null && !column.updatable()) {
+                return false;
+              }
+              return true;
+            })
+        .map(this::getColumnName)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * 获取主键字段
+   *
+   * @return 主键字段
+   */
+  protected Field getIdField() {
+    return Arrays.stream(entityClass.getDeclaredFields())
+        .filter(field -> field.getAnnotation(Id.class) != null)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /**
+   * 将驼峰命名转换为下划线命名
+   *
+   * @param camelCase 驼峰命名字符串
+   * @return 下划线命名字符串
+   */
+  private static String camelToSnake(String camelCase) {
+    if (camelCase == null || camelCase.isEmpty()) {
+      return camelCase;
+    }
+    StringBuilder result = new StringBuilder();
+    result.append(Character.toLowerCase(camelCase.charAt(0)));
+    for (int i = 1; i < camelCase.length(); i++) {
+      char ch = camelCase.charAt(i);
+      if (Character.isUpperCase(ch)) {
+        result.append('_').append(Character.toLowerCase(ch));
+      } else {
+        result.append(ch);
+      }
+    }
+    return result.toString();
+  }
+}

@@ -1,14 +1,12 @@
-package com.vertx.template.repository;
+package com.vertx.template.repository.common;
 
 import java.util.List;
 
 /**
  * 基础仓库接口，定义了通用的CRUD操作
  *
- * @param <T>
- *          实体类型
- * @param <ID>
- *          主键类型
+ * @param <T> 实体类型
+ * @param <ID> 主键类型
  */
 public interface BaseRepository<T, ID> {
 
@@ -22,8 +20,7 @@ public interface BaseRepository<T, ID> {
   /**
    * 根据ID查找实体
    *
-   * @param id
-   *          实体ID
+   * @param id 实体ID
    * @return 包含查询结果的Future
    */
   T findById(ID id);
@@ -31,8 +28,7 @@ public interface BaseRepository<T, ID> {
   /**
    * 保存实体
    *
-   * @param entity
-   *          实体对象
+   * @param entity 实体对象
    * @return 包含保存后实体的Future
    */
   T save(T entity);
@@ -40,10 +36,8 @@ public interface BaseRepository<T, ID> {
   /**
    * 更新实体
    *
-   * @param id
-   *          实体ID
-   * @param entity
-   *          实体对象
+   * @param id 实体ID
+   * @param entity 实体对象
    * @return 包含更新结果的Future
    */
   T update(ID id, T entity);
@@ -51,8 +45,7 @@ public interface BaseRepository<T, ID> {
   /**
    * 删除实体
    *
-   * @param id
-   *          实体ID
+   * @param id 实体ID
    * @return 包含操作结果的Future
    */
   Boolean deleteById(ID id);
