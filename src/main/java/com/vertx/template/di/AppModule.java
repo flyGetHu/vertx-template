@@ -3,15 +3,15 @@ package com.vertx.template.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.vertx.template.config.RouterConfig;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.repository.impl.UserRepositoryImpl;
+import com.vertx.template.router.cache.ReflectionCache;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
-/**
- * 依赖注入模块，配置应用程序的依赖关系
- */
+/** 依赖注入模块，配置应用程序的依赖关系 */
 public class AppModule extends AbstractModule {
   private final Vertx vertx;
   private final JsonObject config;
@@ -45,5 +45,17 @@ public class AppModule extends AbstractModule {
   @Singleton
   Router provideRouter() {
     return Router.router(vertx);
+  }
+
+  @Provides
+  @Singleton
+  public RouterConfig provideRouterConfig() {
+    return new RouterConfig(config);
+  }
+
+  @Provides
+  @Singleton
+  public ReflectionCache provideReflectionCache() {
+    return new ReflectionCache();
   }
 }

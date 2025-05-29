@@ -46,6 +46,31 @@ database:
   #   database: 0
   #   max_pool_size: 10
 
+# 路由配置
+router:
+  # 请求体最大大小（字节），默认1MB
+  max_request_body_size: 1048576
+  # 扫描包路径
+  base_package: "com.vertx.template"
+  # 参数最大长度
+  max_parameter_length: 1000
+  # 是否启用参数校验
+  # 参数校验开关配置
+  # 功能说明：控制是否启用HTTP请求参数的长度校验和Bean Validation校验
+  # 应用场景：
+  #   1. 路径参数(PathParam)长度校验 - 防止过长的URL路径参数
+  #   2. 查询参数(QueryParam)长度校验 - 防止过长的查询字符串
+  #   3. 请求头(HeaderParam)长度校验 - 防止过长的HTTP头部值
+  #   4. 请求体(RequestBody)的Bean Validation校验 - 使用@Valid注解时的数据校验
+  # 校验规则：
+  #   - 参数长度限制：由max_parameter_length配置项控制(默认1000字符)
+  #   - Bean校验：使用JSR-303/JSR-380标准注解(@NotNull, @Size等)
+  # 安全考虑：
+  #   - 开启时可防止恶意超长参数攻击
+  #   - 关闭时可提升性能但降低安全性
+  # 默认值：true(推荐保持开启)
+  enable_parameter_validation: true
+
 # JWT配置
 jwt:
   secret: "run6SCrvXZTQ3Mh4M9EZD3dSZYYp1se5"

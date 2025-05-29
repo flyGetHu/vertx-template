@@ -1,14 +1,11 @@
 package com.vertx.template.exception;
 
-import lombok.Getter;
-
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import lombok.Getter;
 
-/**
- * 参数校验异常
- */
+/** 参数校验异常 */
 @Getter
 public class ValidationException extends BusinessException {
   private final Map<String, List<String>> validationErrors;
@@ -23,4 +20,8 @@ public class ValidationException extends BusinessException {
     this.validationErrors = new HashMap<>();
   }
 
+  // 手动添加getter方法以确保编译通过
+  public Map<String, List<String>> getValidationErrors() {
+    return validationErrors;
+  }
 }
