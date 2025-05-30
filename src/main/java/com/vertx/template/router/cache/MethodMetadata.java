@@ -1,7 +1,7 @@
 package com.vertx.template.router.cache;
 
+import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.router.annotation.HttpMethod;
-import com.vertx.template.security.annotation.AuthType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.List;

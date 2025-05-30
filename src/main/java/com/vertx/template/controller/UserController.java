@@ -1,12 +1,12 @@
 package com.vertx.template.controller;
 
+import com.vertx.template.middleware.auth.UserContext;
+import com.vertx.template.middleware.auth.annotation.AuthType;
+import com.vertx.template.middleware.auth.annotation.CurrentUser;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.model.entity.User;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.router.annotation.*;
-import com.vertx.template.security.UserContext;
-import com.vertx.template.security.annotation.AuthType;
-import com.vertx.template.security.annotation.CurrentUser;
-import com.vertx.template.security.annotation.RequireAuth;
 import jakarta.validation.Valid;
 import java.util.List;
 import javax.inject.Inject;

@@ -1,12 +1,12 @@
 package com.vertx.template.controller;
 
+import com.vertx.template.middleware.auth.JwtUtils;
+import com.vertx.template.middleware.auth.annotation.AuthType;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.router.annotation.PostMapping;
 import com.vertx.template.router.annotation.RequestBody;
 import com.vertx.template.router.annotation.RequestMapping;
 import com.vertx.template.router.annotation.RestController;
-import com.vertx.template.security.JwtUtils;
-import com.vertx.template.security.annotation.AuthType;
-import com.vertx.template.security.annotation.RequireAuth;
 import io.vertx.core.json.JsonObject;
 import javax.inject.Inject;
 import javax.inject.Singleton;

@@ -1,7 +1,7 @@
 package com.vertx.template.model.entity;
 
-import com.vertx.template.annotation.Id;
-import com.vertx.template.annotation.Table;
+import com.vertx.template.model.annotation.Id;
+import com.vertx.template.model.annotation.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

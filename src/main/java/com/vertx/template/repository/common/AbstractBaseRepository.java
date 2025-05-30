@@ -1,8 +1,8 @@
 package com.vertx.template.repository.common;
 
-import com.vertx.template.annotation.Column;
-import com.vertx.template.annotation.Id;
-import com.vertx.template.annotation.Table;
+import com.vertx.template.model.annotation.Column;
+import com.vertx.template.model.annotation.Id;
+import com.vertx.template.model.annotation.Table;
 import com.vertx.template.model.entity.BaseEntity;
 import io.vertx.core.Future;
 import io.vertx.sqlclient.Pool;

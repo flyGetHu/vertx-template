@@ -1,9 +1,9 @@
 package com.vertx.template.router.cache;
 
+import com.vertx.template.middleware.auth.annotation.AuthType;
+import com.vertx.template.middleware.auth.annotation.CurrentUser;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.router.annotation.*;
-import com.vertx.template.security.annotation.AuthType;
-import com.vertx.template.security.annotation.CurrentUser;
-import com.vertx.template.security.annotation.RequireAuth;
 import jakarta.validation.Valid;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;

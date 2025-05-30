@@ -46,10 +46,10 @@ public class UserRepositoryImpl extends AbstractBaseRepository<User, Long>
     // 根据可插入字段的顺序添加参数
     final java.lang.reflect.Field[] fields = entityClass.getDeclaredFields();
     for (java.lang.reflect.Field field : fields) {
-      final com.vertx.template.annotation.Column column =
-          field.getAnnotation(com.vertx.template.annotation.Column.class);
-      final com.vertx.template.annotation.Id id =
-          field.getAnnotation(com.vertx.template.annotation.Id.class);
+      final com.vertx.template.model.annotation.Column column =
+          field.getAnnotation(com.vertx.template.model.annotation.Column.class);
+      final com.vertx.template.model.annotation.Id id =
+          field.getAnnotation(com.vertx.template.model.annotation.Id.class);
 
       // 排除主键字段（如果是自动生成的）和不可插入的字段
       if (id != null && id.generated()) {
@@ -85,10 +85,10 @@ public class UserRepositoryImpl extends AbstractBaseRepository<User, Long>
     // 根据可更新字段的顺序添加参数
     final java.lang.reflect.Field[] fields = entityClass.getDeclaredFields();
     for (java.lang.reflect.Field field : fields) {
-      final com.vertx.template.annotation.Column column =
-          field.getAnnotation(com.vertx.template.annotation.Column.class);
-      final com.vertx.template.annotation.Id id =
-          field.getAnnotation(com.vertx.template.annotation.Id.class);
+      final com.vertx.template.model.annotation.Column column =
+          field.getAnnotation(com.vertx.template.model.annotation.Column.class);
+      final com.vertx.template.model.annotation.Id id =
+          field.getAnnotation(com.vertx.template.model.annotation.Id.class);
 
       // 排除主键字段和不可更新的字段
       if (id != null) {

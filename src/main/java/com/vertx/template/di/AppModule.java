@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.vertx.template.config.RouterConfig;
+import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
+import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.repository.impl.UserRepositoryImpl;
 import com.vertx.template.router.cache.ReflectionCache;
@@ -57,5 +59,17 @@ public class AppModule extends AbstractModule {
   @Singleton
   public ReflectionCache provideReflectionCache() {
     return new ReflectionCache();
+  }
+
+  @Provides
+  @Singleton
+  public RateLimitManager provideRateLimitManager() {
+    return new RateLimitManager();
+  }
+
+  @Provides
+  @Singleton
+  public RateLimitInterceptor provideRateLimitInterceptor(RateLimitManager rateLimitManager) {
+    return new RateLimitInterceptor(rateLimitManager);
   }
 }

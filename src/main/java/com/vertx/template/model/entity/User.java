@@ -1,8 +1,8 @@
 package com.vertx.template.model.entity;
 
-import com.vertx.template.annotation.Column;
-import com.vertx.template.annotation.Id;
-import com.vertx.template.annotation.Table;
+import com.vertx.template.model.annotation.Column;
+import com.vertx.template.model.annotation.Id;
+import com.vertx.template.model.annotation.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

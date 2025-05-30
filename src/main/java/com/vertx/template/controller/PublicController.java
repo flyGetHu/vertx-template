@@ -1,8 +1,8 @@
 package com.vertx.template.controller;
 
+import com.vertx.template.middleware.auth.annotation.AuthType;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.router.annotation.*;
-import com.vertx.template.security.annotation.AuthType;
-import com.vertx.template.security.annotation.RequireAuth;
 import java.util.HashMap;
 import java.util.Map;
 import javax.inject.Singleton;

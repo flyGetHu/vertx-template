@@ -4,19 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.vertx.template.config.RouterConfig;
 import com.vertx.template.exception.BusinessException;
+import com.vertx.template.exception.RateLimitException;
 import com.vertx.template.exception.RouteRegistrationException;
 import com.vertx.template.exception.ValidationException;
-import com.vertx.template.handler.ResponseHandler;
+import com.vertx.template.middleware.auth.AuthenticationException;
+import com.vertx.template.middleware.auth.AuthenticationManager;
+import com.vertx.template.middleware.auth.UserContext;
+import com.vertx.template.middleware.auth.annotation.AuthType;
+import com.vertx.template.middleware.auth.annotation.CurrentUser;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
+import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
+import com.vertx.template.middleware.response.ResponseHandler;
+import com.vertx.template.middleware.validation.ValidationUtils;
 import com.vertx.template.router.annotation.*;
 import com.vertx.template.router.cache.MethodMetadata;
 import com.vertx.template.router.cache.ReflectionCache;
-import com.vertx.template.router.validation.ValidationUtils;
-import com.vertx.template.security.AuthenticationException;
-import com.vertx.template.security.AuthenticationManager;
-import com.vertx.template.security.UserContext;
-import com.vertx.template.security.annotation.AuthType;
-import com.vertx.template.security.annotation.CurrentUser;
-import com.vertx.template.security.annotation.RequireAuth;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
@@ -48,6 +50,7 @@ public class AnnotationRouterHandler {
   private final AuthenticationManager authenticationManager;
   private final RouterConfig routerConfig;
   private final ReflectionCache reflectionCache;
+  private final RateLimitInterceptor rateLimitInterceptor;
 
   @Inject
   public AnnotationRouterHandler(
@@ -55,12 +58,14 @@ public class AnnotationRouterHandler {
       ResponseHandler responseHandler,
       AuthenticationManager authenticationManager,
       RouterConfig routerConfig,
-      ReflectionCache reflectionCache) {
+      ReflectionCache reflectionCache,
+      RateLimitInterceptor rateLimitInterceptor) {
     this.injector = injector;
     this.responseHandler = responseHandler;
     this.authenticationManager = authenticationManager;
     this.routerConfig = routerConfig;
     this.reflectionCache = reflectionCache;
+    this.rateLimitInterceptor = rateLimitInterceptor;
     this.objectMapper = new ObjectMapper();
     this.objectMapper.findAndRegisterModules(); // 注册时间模块等
   }
@@ -275,6 +280,9 @@ public class AnnotationRouterHandler {
                     ? resolveMethodArgsFromCache(metadata, ctx)
                     : resolveMethodArgs(method, ctx);
 
+            // 执行限流检查（在参数解析后，方法调用前）
+            rateLimitInterceptor.performRateLimitCheck(controller.getClass(), method, ctx, args);
+
             // 调用控制器方法
             Object result = method.invoke(controller, args);
 
@@ -287,14 +295,20 @@ public class AnnotationRouterHandler {
           } catch (ValidationException e) {
             logger.debug("参数校验失败: {}", e.getMessage());
             throw e;
+          } catch (RateLimitException e) {
+            logger.debug("限流检查失败: {}", e.getMessage());
+            throw e;
           } catch (Exception e) {
             logger.error("调用控制器方法时发生异常", e);
             throw switch (e) {
               case AuthenticationException authEx -> authEx;
+              case RateLimitException rateLimitEx -> rateLimitEx;
               case Exception ex when ex.getCause() instanceof BusinessException ->
                   (BusinessException) ex.getCause();
               case Exception ex when ex.getCause() instanceof AuthenticationException ->
                   (AuthenticationException) ex.getCause();
+              case Exception ex when ex.getCause() instanceof RateLimitException ->
+                  (RateLimitException) ex.getCause();
               default -> new BusinessException(500, "Internal Server Error");
             };
           }

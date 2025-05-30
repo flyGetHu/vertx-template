@@ -7,7 +7,7 @@ import static com.vertx.template.constants.RouterConstants.*;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
-import com.vertx.template.handler.GlobalExceptionHandler;
+import com.vertx.template.middleware.exception.GlobalExceptionHandler;
 import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.router.handler.AnnotationRouterHandler;
 import io.vertx.core.Vertx;
