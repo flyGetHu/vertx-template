@@ -15,9 +15,9 @@ public interface Middleware {
    * 处理请求
    *
    * @param context 路由上下文
-   * @return 处理结果，true表示继续执行后续中间件，false表示中断执行
+   * @return 处理结果，包含执行状态、状态码、消息和是否继续执行后续中间件的标识
    */
-  Future<Boolean> handle(RoutingContext context);
+  Future<MiddlewareResult> handle(RoutingContext context);
 
   /**
    * 获取中间件名称

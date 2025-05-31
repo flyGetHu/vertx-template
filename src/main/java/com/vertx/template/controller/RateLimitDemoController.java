@@ -103,10 +103,4 @@ public class RateLimitDemoController {
     log.info("无限流接口被调用");
     return ApiResponse.success("无限流接口调用成功，当前时间: " + LocalDateTime.now());
   }
-
-  /** 获取限流状态信息 */
-  @GetMapping("/status")
-  public ApiResponse<String> getRateLimitStatus() {
-    return ApiResponse.success("限流功能正常运行，当前时间: " + LocalDateTime.now());
-  }
 }

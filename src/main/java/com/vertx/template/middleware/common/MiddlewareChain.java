@@ -41,7 +41,10 @@ public class MiddlewareChain {
    * @param context 路由上下文
    * @return 执行结果
    */
-  public Future<Boolean> execute(final RoutingContext context) {
+  public Future<MiddlewareResult> execute(final RoutingContext context) {
+    if (middlewares.isEmpty()) {
+      return Future.succeededFuture(MiddlewareResult.success("无中间件需要执行"));
+    }
     return executeMiddleware(context, 0);
   }
 
@@ -52,37 +55,55 @@ public class MiddlewareChain {
    * @param index 当前中间件索引
    * @return 执行结果
    */
-  private Future<Boolean> executeMiddleware(final RoutingContext context, final int index) {
+  private Future<MiddlewareResult> executeMiddleware(
+      final RoutingContext context, final int index) {
     if (index >= middlewares.size()) {
-      return Future.succeededFuture(true);
+      return Future.succeededFuture(MiddlewareResult.success("所有中间件执行完成"));
     }
 
     final Middleware middleware = middlewares.get(index);
+    log.debug("执行中间件: {}", middleware.getName());
 
     try {
       return middleware
           .handle(context)
           .compose(
               result -> {
-                if (result) {
-                  // 继续执行下一个中间件
-                  return executeMiddleware(context, index + 1);
-                } else {
-                  // 中断执行
-                  log.debug("Middleware chain interrupted by: {}", middleware.getName());
-                  return Future.succeededFuture(false);
+                log.debug("中间件 {} 执行结果: {}", middleware.getName(), result);
+
+                // 检查执行结果
+                if (!result.isSuccess()) {
+                  // 中间件执行失败，中断链条
+                  log.warn(
+                      "中间件 {} 执行失败: {} - {}",
+                      middleware.getName(),
+                      result.getStatusCode(),
+                      result.getMessage());
+                  return Future.succeededFuture(result);
                 }
+
+                if (!result.shouldContinueChain()) {
+                  // 中间件要求停止执行链条
+                  log.info("中间件 {} 要求停止执行链条: {}", middleware.getName(), result.getMessage());
+                  return Future.succeededFuture(result);
+                }
+
+                // 继续执行下一个中间件
+                return executeMiddleware(context, index + 1);
               })
           .recover(
               throwable -> {
                 log.error("Error in middleware: {}", middleware.getName(), throwable);
-                // 发生错误时继续执行下一个中间件
-                return executeMiddleware(context, index + 1);
+                // 发生错误时返回错误结果
+                MiddlewareResult errorResult =
+                    MiddlewareResult.failure("500", "中间件执行异常: " + throwable.getMessage());
+                return Future.succeededFuture(errorResult);
               });
     } catch (Exception e) {
       log.error("Exception in middleware: {}", middleware.getName(), e);
-      // 发生异常时继续执行下一个中间件
-      return executeMiddleware(context, index + 1);
+      // 发生异常时返回错误结果
+      MiddlewareResult errorResult = MiddlewareResult.failure("500", "中间件执行异常: " + e.getMessage());
+      return Future.succeededFuture(errorResult);
     }
   }
 

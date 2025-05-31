@@ -4,6 +4,10 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.vertx.template.config.RouterConfig;
+import com.vertx.template.middleware.auth.AuthMiddleware;
+import com.vertx.template.middleware.auth.AuthenticationManager;
+import com.vertx.template.middleware.common.MiddlewareChain;
+import com.vertx.template.middleware.ratelimit.RateLimitMiddleware;
 import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.repository.UserRepository;
@@ -71,5 +75,24 @@ public class AppModule extends AbstractModule {
   @Singleton
   public RateLimitInterceptor provideRateLimitInterceptor(RateLimitManager rateLimitManager) {
     return new RateLimitInterceptor(rateLimitManager);
+  }
+
+  @Provides
+  @Singleton
+  public MiddlewareChain provideMiddlewareChain() {
+    return new MiddlewareChain();
+  }
+
+  @Provides
+  @Singleton
+  public AuthMiddleware provideAuthMiddleware(AuthenticationManager authenticationManager) {
+    return new com.vertx.template.middleware.auth.impl.DefaultAuthMiddleware(authenticationManager);
+  }
+
+  @Provides
+  @Singleton
+  public RateLimitMiddleware provideRateLimitMiddleware(RateLimitManager rateLimitManager) {
+    return new com.vertx.template.middleware.ratelimit.impl.DefaultRateLimitMiddleware(
+        rateLimitManager);
   }
 }
