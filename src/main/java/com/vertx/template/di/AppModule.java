@@ -3,11 +3,13 @@ package com.vertx.template.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.vertx.template.config.DatabaseConfig;
 import com.vertx.template.config.RouterConfig;
-import com.vertx.template.middleware.auth.AuthMiddleware;
 import com.vertx.template.middleware.auth.AuthenticationManager;
 import com.vertx.template.middleware.common.MiddlewareChain;
-import com.vertx.template.middleware.ratelimit.RateLimitMiddleware;
+import com.vertx.template.middleware.core.BodyHandlerMiddleware;
+import com.vertx.template.middleware.core.CorsMiddleware;
+import com.vertx.template.middleware.core.RequestLoggerMiddleware;
 import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.repository.UserRepository;
@@ -19,6 +21,7 @@ import io.vertx.ext.web.Router;
 
 /** 依赖注入模块，配置应用程序的依赖关系 */
 public class AppModule extends AbstractModule {
+
   private final Vertx vertx;
   private final JsonObject config;
 
@@ -31,25 +34,23 @@ public class AppModule extends AbstractModule {
   protected void configure() {
     // 绑定接口到实现类
     bind(UserRepository.class).to(UserRepositoryImpl.class);
-
-    // 其他绑定配置
   }
 
   @Provides
   @Singleton
-  Vertx provideVertx() {
+  public Vertx provideVertx() {
     return vertx;
   }
 
   @Provides
   @Singleton
-  JsonObject provideConfig() {
+  public JsonObject provideConfig() {
     return config;
   }
 
   @Provides
   @Singleton
-  Router provideRouter() {
+  public Router provideRouter() {
     return Router.router(vertx);
   }
 
@@ -61,8 +62,20 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public ReflectionCache provideReflectionCache() {
-    return new ReflectionCache();
+  public DatabaseConfig provideDatabaseConfig(Vertx vertx, JsonObject config) {
+    return new DatabaseConfig(vertx, config);
+  }
+
+  @Provides
+  @Singleton
+  public MiddlewareChain provideMiddlewareChain() {
+    return new MiddlewareChain();
+  }
+
+  @Provides
+  @Singleton
+  public AuthenticationManager provideAuthenticationManager(com.google.inject.Injector injector) {
+    return new AuthenticationManager(injector);
   }
 
   @Provides
@@ -79,20 +92,26 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public MiddlewareChain provideMiddlewareChain() {
-    return new MiddlewareChain();
+  public ReflectionCache provideReflectionCache() {
+    return new ReflectionCache();
+  }
+
+  // 核心中间件配置
+  @Provides
+  @Singleton
+  public CorsMiddleware provideCorsMiddleware(JsonObject config) {
+    return new CorsMiddleware(config);
   }
 
   @Provides
   @Singleton
-  public AuthMiddleware provideAuthMiddleware(AuthenticationManager authenticationManager) {
-    return new com.vertx.template.middleware.auth.impl.DefaultAuthMiddleware(authenticationManager);
+  public BodyHandlerMiddleware provideBodyHandlerMiddleware(JsonObject config) {
+    return new BodyHandlerMiddleware(config);
   }
 
   @Provides
   @Singleton
-  public RateLimitMiddleware provideRateLimitMiddleware(RateLimitManager rateLimitManager) {
-    return new com.vertx.template.middleware.ratelimit.impl.DefaultRateLimitMiddleware(
-        rateLimitManager);
+  public RequestLoggerMiddleware provideRequestLoggerMiddleware(JsonObject config) {
+    return new RequestLoggerMiddleware(config);
   }
 }

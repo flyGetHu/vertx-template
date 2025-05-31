@@ -7,15 +7,11 @@ import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.RateLimitException;
 import com.vertx.template.exception.RouteRegistrationException;
 import com.vertx.template.exception.ValidationException;
+import com.vertx.template.middleware.MiddlewareInitializer;
 import com.vertx.template.middleware.auth.AuthenticationException;
 import com.vertx.template.middleware.auth.AuthenticationManager;
 import com.vertx.template.middleware.auth.UserContext;
-import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.CurrentUser;
-import com.vertx.template.middleware.auth.annotation.RequireAuth;
-import com.vertx.template.middleware.common.MiddlewareChain;
-import com.vertx.template.middleware.common.MiddlewareResult;
-import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.middleware.response.ResponseHandler;
 import com.vertx.template.middleware.validation.ValidationUtils;
 import com.vertx.template.router.annotation.*;
@@ -49,28 +45,22 @@ public class AnnotationRouterHandler {
   private final Injector injector;
   private final ResponseHandler responseHandler;
   private final ObjectMapper objectMapper;
-  private final AuthenticationManager authenticationManager;
   private final RouterConfig routerConfig;
   private final ReflectionCache reflectionCache;
-  private final RateLimitInterceptor rateLimitInterceptor;
-  private final MiddlewareChain middlewareChain;
+  private final MiddlewareInitializer middlewareInitializer;
 
   @Inject
   public AnnotationRouterHandler(
       Injector injector,
       ResponseHandler responseHandler,
-      AuthenticationManager authenticationManager,
       RouterConfig routerConfig,
       ReflectionCache reflectionCache,
-      RateLimitInterceptor rateLimitInterceptor,
-      MiddlewareChain middlewareChain) {
+      MiddlewareInitializer middlewareInitializer) {
     this.injector = injector;
     this.responseHandler = responseHandler;
-    this.authenticationManager = authenticationManager;
     this.routerConfig = routerConfig;
     this.reflectionCache = reflectionCache;
-    this.rateLimitInterceptor = rateLimitInterceptor;
-    this.middlewareChain = middlewareChain;
+    this.middlewareInitializer = middlewareInitializer;
     this.objectMapper = new ObjectMapper();
     this.objectMapper.findAndRegisterModules(); // 注册时间模块等
   }
@@ -266,60 +256,21 @@ public class AnnotationRouterHandler {
 
   /** 创建路由处理器 */
   private Handler<RoutingContext> createHandler(Object controller, Method method) {
-    return responseHandler.handle(
-        ctx -> {
-          try {
-            // 执行中间件链
-            final MiddlewareResult middlewareResult = Future.await(middlewareChain.execute(ctx));
-            if (!middlewareResult.isSuccess() || !middlewareResult.shouldContinueChain()) {
-              logger.debug(
-                  "中间件链中断了请求处理: {} - {}", ctx.request().path(), middlewareResult.getMessage());
-
-              // 如果中间件失败，设置错误响应
-              if (!middlewareResult.isSuccess()) {
-                int statusCode = parseStatusCode(middlewareResult.getStatusCode());
-                ctx.response()
-                    .setStatusCode(statusCode)
-                    .putHeader("Content-Type", "application/json")
-                    .end(createErrorResponse(middlewareResult).encode());
+    // 创建业务处理器
+    Handler<RoutingContext> businessHandler =
+        responseHandler.handle(
+            ctx -> {
+              try {
+                // 执行路由处理逻辑（不再包含中间件执行）
+                return Future.await(executeRouteHandler(ctx, controller, method));
+              } catch (Exception e) {
+                logger.error("处理请求时发生异常", e);
+                return Future.failedFuture(e);
               }
+            });
 
-              return Future.succeededFuture(null);
-            }
-
-            // 执行路由处理逻辑
-            return Future.await(executeRouteHandler(ctx, controller, method));
-
-          } catch (Exception e) {
-            logger.error("处理请求时发生异常", e);
-            return Future.failedFuture(e);
-          }
-        });
-  }
-
-  /** 解析状态码 */
-  private int parseStatusCode(String statusCode) {
-    try {
-      return Integer.parseInt(statusCode);
-    } catch (NumberFormatException e) {
-      logger.warn("无效的状态码: {}, 使用默认值500", statusCode);
-      return 500;
-    }
-  }
-
-  /** 创建错误响应 */
-  private JsonObject createErrorResponse(MiddlewareResult result) {
-    JsonObject response =
-        new JsonObject()
-            .put("success", false)
-            .put("code", result.getStatusCode())
-            .put("message", result.getMessage());
-
-    if (result.getData() != null) {
-      response.put("data", result.getData());
-    }
-
-    return response;
+    // 使用MiddlewareInitializer的统一入口包装业务处理器
+    return middlewareInitializer.createRequestHandler(businessHandler);
   }
 
   /** 执行路由处理逻辑 */
@@ -328,30 +279,14 @@ public class AnnotationRouterHandler {
       // 从缓存获取方法元数据，避免重复反射
       final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
 
-      // 执行认证检查
-      performAuthentication(ctx, controller, method, metadata);
-
       // 解析方法参数
       final Object[] args = resolveMethodArguments(metadata, method, ctx);
-
-      // 执行限流检查
-      rateLimitInterceptor.performRateLimitCheck(controller.getClass(), method, ctx, args);
 
       // 调用控制器方法并处理结果
       return invokeControllerMethod(controller, method, args);
 
     } catch (Exception e) {
       return Future.failedFuture(normalizeException(e));
-    }
-  }
-
-  /** 执行认证检查 */
-  private void performAuthentication(
-      RoutingContext ctx, Object controller, Method method, MethodMetadata metadata) {
-    final AuthType authType =
-        metadata != null ? metadata.getAuthType() : getAuthType(controller, method);
-    if (metadata == null || metadata.isRequireAuth()) {
-      authenticationManager.authenticate(ctx, authType);
     }
   }
 
@@ -540,24 +475,6 @@ public class AnnotationRouterHandler {
         }
       }
     };
-  }
-
-  /** 获取认证类型（默认所有接口都需要JWT认证） */
-  private AuthType getAuthType(Object controller, Method method) {
-    // 先检查方法级别的注解
-    RequireAuth methodAuth = method.getAnnotation(RequireAuth.class);
-    if (methodAuth != null) {
-      return methodAuth.value();
-    }
-
-    // 再检查类级别的注解
-    RequireAuth classAuth = controller.getClass().getAnnotation(RequireAuth.class);
-    if (classAuth != null) {
-      return classAuth.value();
-    }
-
-    // 默认使用JWT认证
-    return AuthType.JWT;
   }
 
   /** 解析方法参数 */

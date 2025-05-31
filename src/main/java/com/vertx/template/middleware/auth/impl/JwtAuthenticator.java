@@ -70,7 +70,7 @@ public class JwtAuthenticator implements Authenticator {
       // 检查过期时间（支持配置的偏移时间）
       long exp = payload.getLong("exp", 0L);
       long now = Instant.now().getEpochSecond();
-      long expWithOffset = exp + (expireOffsetMinutes * 60);
+      long expWithOffset = exp + (expireOffsetMinutes * 60L);
 
       if (now > expWithOffset) {
         throw new AuthenticationException("Token已过期");

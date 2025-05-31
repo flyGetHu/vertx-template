@@ -7,6 +7,7 @@ import static com.vertx.template.constants.RouterConstants.*;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
+import com.vertx.template.middleware.MiddlewareInitializer;
 import com.vertx.template.middleware.exception.GlobalExceptionHandler;
 import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.router.handler.AnnotationRouterHandler;
@@ -72,9 +73,10 @@ public class RouterRegistry {
   /** 注册全局中间件 */
   private void registerMiddlewares() {
     try {
-      // 通过注入器获取全局中间件
-      GlobalMiddleware middleware = injector.getInstance(GlobalMiddleware.class);
-      middleware.register();
+      // 通过注入器获取中间件初始化器
+      MiddlewareInitializer middlewareInitializer =
+          injector.getInstance(MiddlewareInitializer.class);
+      middlewareInitializer.initialize();
       logger.debug(LOG_MIDDLEWARES_REGISTERED);
     } catch (Exception e) {
       logger.error("注册全局中间件失败", e);
@@ -130,15 +132,7 @@ public class RouterRegistry {
   }
 
   /** 错误处理器配置内部类 */
-  private static class ErrorHandlerConfig {
-    final int statusCode;
-    final String message;
-
-    ErrorHandlerConfig(int statusCode, String message) {
-      this.statusCode = statusCode;
-      this.message = message;
-    }
-  }
+  private record ErrorHandlerConfig(int statusCode, String message) {}
 
   /** 注册全局失败处理器 */
   private void registerGlobalFailureHandler() {

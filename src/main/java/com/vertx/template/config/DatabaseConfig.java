@@ -58,8 +58,7 @@ public class DatabaseConfig {
               .setDatabase(mysqlConfig.getString("database", "vertx_demo"))
               .setUser(mysqlConfig.getString("username", "root"))
               .setPassword(mysqlConfig.getString("password", "root"))
-              .setConnectTimeout(mysqlConfig.getInteger("connect_timeout", 10000))
-              .setIdleTimeout(mysqlConfig.getInteger("idle_timeout", 30000));
+              .setCharset("utf8mb4");
 
       // 连接池配置
       final PoolOptions poolOptions =

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.vertx.template</groupId>
@@ -23,8 +24,8 @@
     <googleJavaFormat.version>1.24.0</googleJavaFormat.version>
 
     <!-- ========== 核心框架版本 ========== -->
-    <vertx.version>4.5.14</vertx.version>
-    <guice.version>5.1.0</guice.version>
+    <vertx.version>5.0.0</vertx.version>
+    <guice.version>7.0.0</guice.version>
     <javax.inject.version>1</javax.inject.version>
 
     <!-- ========== 日志框架版本 ========== -->
@@ -287,11 +288,11 @@
               <style>GOOGLE</style>
             </googleJavaFormat>
             <!-- 导入语句排序 -->
-            <importOrder />
+            <importOrder/>
             <!-- 移除未使用的导入 -->
-            <removeUnusedImports />
+            <removeUnusedImports/>
             <!-- 格式化注解 -->
-            <formatAnnotations />
+            <formatAnnotations/>
           </java>
         </configuration>
       </plugin>

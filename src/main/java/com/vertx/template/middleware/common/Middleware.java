@@ -1,6 +1,5 @@
 package com.vertx.template.middleware.common;
 
-import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -17,7 +16,7 @@ public interface Middleware {
    * @param context 路由上下文
    * @return 处理结果，包含执行状态、状态码、消息和是否继续执行后续中间件的标识
    */
-  Future<MiddlewareResult> handle(RoutingContext context);
+  MiddlewareResult handle(RoutingContext context);
 
   /**
    * 获取中间件名称
