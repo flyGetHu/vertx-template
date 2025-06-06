@@ -1,5 +1,6 @@
 package com.vertx.template.router.cache;
 
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.CurrentUser;
 import com.vertx.template.middleware.auth.annotation.RequireAuth;
@@ -10,7 +11,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

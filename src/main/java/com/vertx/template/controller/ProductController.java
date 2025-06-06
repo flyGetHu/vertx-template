@@ -1,5 +1,7 @@
 package com.vertx.template.controller;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.model.dto.ProductDto;
 import com.vertx.template.router.annotation.GetMapping;
@@ -15,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /** 产品控制器，展示各种参数解析和校验功能 */
 @RestController

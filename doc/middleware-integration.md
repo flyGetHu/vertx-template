@@ -8,68 +8,129 @@
 
 ### 1. 依赖注入配置 (AppModule)
 
-在 `AppModule.java` 中添加了以下中间件相关的Bean配置：
+**⚠️ 架构调整**: 认证和限流中间件已迁移到注解处理层，不再作为独立中间件。
+
+在 `AppModule.java` 中的中间件相关配置：
 
 ```java
+// 中间件链
 @Provides
 @Singleton
 public MiddlewareChain provideMiddlewareChain() {
   return new MiddlewareChain();
 }
 
+// 认证管理器（用于注解处理）
 @Provides
 @Singleton
-public AuthMiddleware provideAuthMiddleware() {
-  return new AuthMiddleware();
+public AuthenticationManager provideAuthenticationManager(Injector injector) {
+  return new AuthenticationManager(injector);
+}
+
+// 限流管理器（用于注解处理）
+@Provides
+@Singleton
+public RateLimitManager provideRateLimitManager() {
+  return new RateLimitManager();
+}
+
+// 限流拦截器（用于注解处理）
+@Provides
+@Singleton
+public RateLimitInterceptor provideRateLimitInterceptor(RateLimitManager rateLimitManager) {
+  return new RateLimitInterceptor(rateLimitManager);
+}
+
+// 核心中间件
+@Provides
+@Singleton
+public CorsMiddleware provideCorsMiddleware(JsonObject config) {
+  return new CorsMiddleware(config);
 }
 
 @Provides
 @Singleton
-public RateLimitMiddleware provideRateLimitMiddleware(RateLimitManager rateLimitManager) {
-  return new RateLimitMiddleware(rateLimitManager);
+public BodyHandlerMiddleware provideBodyHandlerMiddleware(JsonObject config) {
+  return new BodyHandlerMiddleware(config);
+}
+
+@Provides
+@Singleton
+public RequestLoggerMiddleware provideRequestLoggerMiddleware(JsonObject config) {
+  return new RequestLoggerMiddleware(config);
 }
 ```
 
-### 2. 全局中间件注册 (GlobalMiddleware)
+### 2. 中间件初始化器 (MiddlewareInitializer)
 
-`GlobalMiddleware` 现在负责：
-- 注册传统的Vert.x处理器（CORS、BodyHandler等）
-- 将自定义中间件注册到中间件链
-- 提供中间件链的访问接口
+`MiddlewareInitializer` 现在负责：
+- 注册核心中间件到中间件链（CORS、Body处理器、请求日志）
+- 业务逻辑中间件（认证、限流）已迁移到注解处理层
 
 ```java
-private void registerCustomMiddlewares() {
-  // 注册认证中间件
-  middlewareChain.register(authMiddleware);
+/**
+ * 注册核心中间件
+ */
+private void registerCoreMiddlewares() {
+    // 1. CORS中间件 (order=10)
+    if (corsMiddleware.isEnabled()) {
+      middlewareChain.register(corsMiddleware);
+    }
 
-  // 注册限流中间件
-  middlewareChain.register(rateLimitMiddleware);
+    // 2. Body处理器中间件 (order=20)
+    if (bodyHandlerMiddleware.isEnabled()) {
+      middlewareChain.register(bodyHandlerMiddleware);
+    }
+
+    // 3. 请求日志中间件 (order=30)
+    if (requestLoggerMiddleware.isEnabled()) {
+      middlewareChain.register(requestLoggerMiddleware);
+    }
+}
+
+/**
+ * 注册业务中间件
+ * 认证和限流逻辑已移至注解处理层(@RequireAuth, @RateLimit)
+ */
+private void registerBusinessMiddlewares() {
+    logger.debug("业务中间件注册跳过 - 认证和限流由注解处理层处理");
 }
 ```
 
 ### 3. 路由处理集成 (AnnotationRouterHandler)
 
-在 `AnnotationRouterHandler` 中，每个路由处理器现在都会：
-1. 首先执行中间件链
-2. 如果中间件链执行成功，继续处理路由逻辑
-3. 如果中间件链中断请求，直接返回
+在 `AnnotationRouterHandler` 中，路由处理流程包括：
+1. 执行核心中间件链（CORS、Body处理器、请求日志）
+2. 检查方法级注解（@RequireAuth、@RateLimit）
+3. 执行业务逻辑
+4. 返回处理结果
 
 ```java
 private Handler<RoutingContext> createHandler(Object controller, Method method) {
-  return responseHandler.handle(
-      ctx -> {
-        // 首先执行中间件链
-        return middlewareChain.execute(ctx)
-            .compose(middlewareResult -> {
-              if (!middlewareResult) {
-                // 中间件链中断了请求，直接返回
-                return Future.succeededFuture(null);
-              }
+  return middlewareInitializer.createUnifiedHandler(ctx -> {
+    // 1. 检查认证注解
+    RequireAuth requireAuth = method.getAnnotation(RequireAuth.class);
+    if (requireAuth != null) {
+      try {
+        authenticationManager.authenticate(ctx, requireAuth.value());
+      } catch (AuthenticationException e) {
+        return Future.failedFuture(e);
+      }
+    }
 
-              // 中间件链执行成功，继续处理路由
-              return processRoute(ctx, controller, method);
-            });
-      });
+    // 2. 检查限流注解
+    RateLimit rateLimit = method.getAnnotation(RateLimit.class);
+    if (rateLimit != null) {
+      try {
+        rateLimitInterceptor.checkRateLimit(ctx, rateLimit);
+      } catch (RateLimitException e) {
+        return Future.failedFuture(e);
+      }
+    }
+
+    // 3. 执行业务逻辑
+    return processRoute(ctx, controller, method);
+  });
 }
 ```
 
@@ -81,12 +142,17 @@ private Handler<RoutingContext> createHandler(Object controller, Method method) 
 4. **路由处理** → 执行控制器方法
 5. **响应返回** → 返回处理结果
 
-## 中间件顺序
+## 中间件执行顺序
 
-当前注册的中间件按以下顺序执行：
+### 核心中间件链（自动执行）
+1. **CorsMiddleware** (order: 10) - 跨域处理
+2. **BodyHandlerMiddleware** (order: 20) - 请求体解析
+3. **RequestLoggerMiddleware** (order: 30) - 请求日志
 
-1. **AuthMiddleware** (order: 100) - 认证检查
-2. **RateLimitMiddleware** (order: 200) - 限流检查
+### 注解驱动的业务逻辑（按需执行）
+1. **@RequireAuth** - 认证检查（方法级）
+2. **@RateLimit** - 限流检查（方法级）
+3. **@CurrentUser** - 用户上下文注入（参数级）
 
 ## 如何添加新的中间件
 
@@ -188,11 +254,26 @@ logging.level.com.vertx.template.middleware=DEBUG
 
 ## 总结
 
-中间件系统现在已经完全集成到项目中：
-- ✅ MiddlewareChain 已在AppModule中注册
-- ✅ 中间件在GlobalMiddleware中正确注册
-- ✅ 路由处理器中集成了中间件链执行
-- ✅ 包含完整的测试覆盖
-- ✅ 支持依赖注入和配置管理
+中间件系统已完成重大架构调整并修复了Guice 7.0.0兼容性问题：
 
-系统现在可以正确处理中间件的注册、执行和管理。
+### ✅ 架构优化完成
+- 核心中间件（CORS、Body处理器、请求日志）使用传统中间件链
+- 业务逻辑（认证、限流）迁移到注解处理层
+- 简化了依赖注入关系，符合Guice 7.0.0严格检查
+
+### ✅ 依赖注入修复
+- 移除了已删除中间件的依赖引用
+- 补充了缺失的组件（AuthenticationManager、RateLimitManager等）
+- 所有依赖注入错误已解决
+
+### ✅ 功能完整性
+- 注解驱动的认证和限流功能正常
+- 核心中间件链正确执行
+- 统一的错误处理和响应格式
+
+### ✅ 开发体验提升
+- 注解使用更加简洁直观
+- 中间件配置清晰明确
+- 错误信息详细准确
+
+详细修复过程请参考：[依赖注入修复总结](./DEPENDENCY_INJECTION_FIX_SUMMARY.md)

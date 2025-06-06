@@ -1,12 +1,12 @@
 package com.vertx.template.service.impl;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.model.dto.UserDto;
 import com.vertx.template.service.UserService;
 import io.vertx.core.Future;
 import java.util.ArrayList;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 @Singleton
 public class UserServiceImpl implements UserService {

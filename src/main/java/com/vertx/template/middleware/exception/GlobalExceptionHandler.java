@@ -2,6 +2,8 @@ package com.vertx.template.middleware.exception;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.RateLimitException;
 import com.vertx.template.exception.ValidationException;
@@ -11,8 +13,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,17 +167,38 @@ public class GlobalExceptionHandler implements Handler<RoutingContext> {
    */
   private void sendErrorResponse(RoutingContext ctx, ApiResponse<?> response) {
     try {
+      // 检查响应头是否已发送
+      if (ctx.response().headWritten()) {
+        logger.warn("响应头已发送，无法发送错误响应");
+        return;
+      }
+
+      // 检查连接是否已关闭
+      if (ctx.response().closed()) {
+        logger.warn("连接已关闭，无法发送错误响应");
+        return;
+      }
+
       ctx.response()
           .setStatusCode(200) // 统一使用200状态码，通过业务code区分错误
           .putHeader("content-type", "application/json")
           .end(Json.encodePrettily(response));
     } catch (Exception e) {
-      // 如果响应发送失败，记录日志并发送最简单的错误响应
+      // 如果响应发送失败，记录日志并尝试发送最简单的错误响应
       logger.error("发送错误响应失败", e);
-      ctx.response()
-          .setStatusCode(500)
-          .putHeader("content-type", "text/plain")
-          .end("Internal Server Error");
+
+      // 最后的保护机制：仅在响应头未发送且连接未关闭时尝试发送简单响应
+      if (!ctx.response().headWritten() && !ctx.response().closed()) {
+        try {
+          ctx.response()
+              .setStatusCode(500)
+              .putHeader("content-type", "text/plain")
+              .end("Internal Server Error");
+        } catch (Exception fallbackException) {
+          logger.error("发送兜底错误响应也失败", fallbackException);
+          // 这时只能记录日志，无法继续处理
+        }
+      }
     }
   }
 

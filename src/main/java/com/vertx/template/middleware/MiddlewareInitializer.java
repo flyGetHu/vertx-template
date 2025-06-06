@@ -1,12 +1,12 @@
 package com.vertx.template.middleware;
 
-import com.vertx.template.middleware.auth.AuthMiddleware;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.common.MiddlewareChain;
 import com.vertx.template.middleware.common.MiddlewareResult;
 import com.vertx.template.middleware.core.BodyHandlerMiddleware;
 import com.vertx.template.middleware.core.CorsMiddleware;
 import com.vertx.template.middleware.core.RequestLoggerMiddleware;
-import com.vertx.template.middleware.ratelimit.RateLimitMiddleware;
 import com.vertx.template.middleware.response.ResponseHandler;
 import com.vertx.template.model.dto.ApiResponse;
 import io.vertx.core.Handler;
@@ -15,8 +15,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,15 +39,11 @@ public class MiddlewareInitializer {
   private final BodyHandlerMiddleware bodyHandlerMiddleware;
   private final RequestLoggerMiddleware requestLoggerMiddleware;
 
-  // 业务中间件
-  private final AuthMiddleware authMiddleware;
-  private final RateLimitMiddleware rateLimitMiddleware;
-
   // 响应处理器
   private final ResponseHandler responseHandler;
 
   /**
-   * 构造函数
+   * 构造函数 - 认证和限流逻辑已移至注解处理层，不再需要独立的中间件
    *
    * @param vertx Vert.x实例
    * @param router 路由器实例
@@ -58,8 +52,6 @@ public class MiddlewareInitializer {
    * @param corsMiddleware CORS中间件
    * @param bodyHandlerMiddleware Body处理器中间件
    * @param requestLoggerMiddleware 请求日志中间件
-   * @param authMiddleware 认证中间件
-   * @param rateLimitMiddleware 限流中间件
    * @param responseHandler 响应处理器
    */
   @Inject
@@ -71,8 +63,6 @@ public class MiddlewareInitializer {
       CorsMiddleware corsMiddleware,
       BodyHandlerMiddleware bodyHandlerMiddleware,
       RequestLoggerMiddleware requestLoggerMiddleware,
-      AuthMiddleware authMiddleware,
-      RateLimitMiddleware rateLimitMiddleware,
       ResponseHandler responseHandler) {
     this.vertx = vertx;
     this.router = router;
@@ -81,8 +71,6 @@ public class MiddlewareInitializer {
     this.corsMiddleware = corsMiddleware;
     this.bodyHandlerMiddleware = bodyHandlerMiddleware;
     this.requestLoggerMiddleware = requestLoggerMiddleware;
-    this.authMiddleware = authMiddleware;
-    this.rateLimitMiddleware = rateLimitMiddleware;
     this.responseHandler = responseHandler;
   }
 
@@ -135,22 +123,10 @@ public class MiddlewareInitializer {
   /**
    * 注册业务中间件
    *
-   * <p>按照执行顺序注册中间件： 1. 认证中间件 (order=40) - 处理用户认证 2. 限流中间件 (order=50) - 处理请求限流
+   * <p>认证和限流逻辑已移至注解处理层(@RequireAuth, @RateLimit)，无需注册独立的中间件
    */
   private void registerBusinessMiddlewares() {
-    // 1. 认证中间件 (order=40)
-    if (authMiddleware.isEnabled()) {
-      middlewareChain.register(authMiddleware);
-      logger.debug("已注册认证中间件");
-    }
-
-    // 2. 限流中间件 (order=50)
-    if (rateLimitMiddleware.isEnabled()) {
-      middlewareChain.register(rateLimitMiddleware);
-      logger.debug("已注册限流中间件");
-    }
-
-    logger.debug("业务中间件注册完成");
+    logger.debug("业务中间件注册跳过 - 认证和限流由注解处理层处理");
   }
 
   /**

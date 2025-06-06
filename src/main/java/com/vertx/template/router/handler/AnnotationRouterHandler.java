@@ -1,7 +1,9 @@
 package com.vertx.template.router.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 import com.vertx.template.config.RouterConfig;
 import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.RateLimitException;
@@ -11,7 +13,11 @@ import com.vertx.template.middleware.MiddlewareInitializer;
 import com.vertx.template.middleware.auth.AuthenticationException;
 import com.vertx.template.middleware.auth.AuthenticationManager;
 import com.vertx.template.middleware.auth.UserContext;
+import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.CurrentUser;
+import com.vertx.template.middleware.auth.annotation.RequireAuth;
+import com.vertx.template.middleware.ratelimit.annotation.RateLimit;
+import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.middleware.response.ResponseHandler;
 import com.vertx.template.middleware.validation.ValidationUtils;
 import com.vertx.template.router.annotation.*;
@@ -32,8 +38,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +52,8 @@ public class AnnotationRouterHandler {
   private final RouterConfig routerConfig;
   private final ReflectionCache reflectionCache;
   private final MiddlewareInitializer middlewareInitializer;
+  private final AuthenticationManager authenticationManager;
+  private final RateLimitInterceptor rateLimitInterceptor;
 
   @Inject
   public AnnotationRouterHandler(
@@ -55,12 +61,16 @@ public class AnnotationRouterHandler {
       ResponseHandler responseHandler,
       RouterConfig routerConfig,
       ReflectionCache reflectionCache,
-      MiddlewareInitializer middlewareInitializer) {
+      MiddlewareInitializer middlewareInitializer,
+      AuthenticationManager authenticationManager,
+      RateLimitInterceptor rateLimitInterceptor) {
     this.injector = injector;
     this.responseHandler = responseHandler;
     this.routerConfig = routerConfig;
     this.reflectionCache = reflectionCache;
     this.middlewareInitializer = middlewareInitializer;
+    this.authenticationManager = authenticationManager;
+    this.rateLimitInterceptor = rateLimitInterceptor;
     this.objectMapper = new ObjectMapper();
     this.objectMapper.findAndRegisterModules(); // 注册时间模块等
   }
@@ -262,10 +272,10 @@ public class AnnotationRouterHandler {
             ctx -> {
               try {
                 // 执行路由处理逻辑（不再包含中间件执行）
-                return Future.await(executeRouteHandler(ctx, controller, method));
+                return executeRouteHandler(ctx, controller, method);
               } catch (Exception e) {
                 logger.error("处理请求时发生异常", e);
-                return Future.failedFuture(e);
+                return e;
               }
             });
 
@@ -274,32 +284,42 @@ public class AnnotationRouterHandler {
   }
 
   /** 执行路由处理逻辑 */
-  private Future<Object> executeRouteHandler(RoutingContext ctx, Object controller, Method method) {
+  private Object executeRouteHandler(RoutingContext ctx, Object controller, Method method) {
     try {
-      // 从缓存获取方法元数据，避免重复反射
+      // 1. 执行认证检查
+      performAuthentication(ctx, controller.getClass(), method);
+
+      // 2. 执行限流检查
+      performRateLimitCheck(ctx, controller.getClass(), method);
+
+      // 3. 从缓存获取方法元数据，避免重复反射
       final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
 
-      // 解析方法参数
+      // 4. 解析方法参数
       final Object[] args = resolveMethodArguments(metadata, method, ctx);
 
-      // 调用控制器方法并处理结果
-      return invokeControllerMethod(controller, method, args);
+      // 5. 调用控制器方法并处理结果
+      Object result = invokeControllerMethod(controller, method, args);
+
+      return result;
 
     } catch (Exception e) {
-      return Future.failedFuture(normalizeException(e));
+      logger.error("处理请求时发生异常", e);
+      return normalizeException(e);
     }
   }
 
   /** 解析方法参数 */
   private Object[] resolveMethodArguments(
       MethodMetadata metadata, Method method, RoutingContext ctx) {
-    return metadata != null
-        ? resolveMethodArgsFromCache(metadata, ctx)
-        : resolveMethodArgs(method, ctx);
+    if (metadata == null) {
+      return resolveMethodArgs(method, ctx);
+    }
+    return resolveMethodArgsFromCache(metadata, ctx);
   }
 
   /** 调用控制器方法并处理结果 */
-  private Future<Object> invokeControllerMethod(Object controller, Method method, Object[] args) {
+  private Object invokeControllerMethod(Object controller, Method method, Object[] args) {
     try {
       final Object result = method.invoke(controller, args);
 
@@ -307,12 +327,12 @@ public class AnnotationRouterHandler {
       if (result instanceof Future<?> future) {
         @SuppressWarnings("unchecked")
         Future<Object> typedFuture = (Future<Object>) future;
-        return typedFuture;
+        return Future.await(typedFuture);
       }
 
-      return Future.succeededFuture(result);
+      return result;
     } catch (Exception e) {
-      return Future.failedFuture(normalizeException(e));
+      return normalizeException(e);
     }
   }
 
@@ -720,5 +740,62 @@ public class AnnotationRouterHandler {
       throw new ValidationException(
           String.format("%s 类型转换失败: 不支持的参数类型 %s", parameterName, targetType.getName()));
     }
+  }
+
+  /**
+   * 执行认证检查
+   *
+   * @param ctx 路由上下文
+   * @param controllerClass 控制器类
+   * @param method 控制器方法
+   * @throws AuthenticationException 认证失败时抛出
+   */
+  private void performAuthentication(RoutingContext ctx, Class<?> controllerClass, Method method) {
+    // 1. 获取方法级别的@RequireAuth注解
+    RequireAuth methodAuth = method.getAnnotation(RequireAuth.class);
+
+    // 2. 如果方法级别没有，检查类级别的@RequireAuth注解
+    RequireAuth classAuth = controllerClass.getAnnotation(RequireAuth.class);
+
+    // 3. 确定最终的认证类型（方法级别优先）
+    AuthType authType = AuthType.JWT; // 默认需要JWT认证
+    if (methodAuth != null) {
+      authType = methodAuth.value();
+    } else if (classAuth != null) {
+      authType = classAuth.value();
+    }
+
+    // 4. 执行认证
+    if (authType != AuthType.NONE) {
+      authenticationManager.authenticate(ctx, authType);
+    }
+  }
+
+  /**
+   * 执行限流检查
+   *
+   * @param ctx 路由上下文
+   * @param controllerClass 控制器类
+   * @param method 控制器方法
+   * @throws RateLimitException 限流时抛出
+   */
+  private void performRateLimitCheck(RoutingContext ctx, Class<?> controllerClass, Method method) {
+    // 1. 获取方法级别的@RateLimit注解
+    RateLimit methodRateLimit = method.getAnnotation(RateLimit.class);
+
+    // 2. 如果方法级别没有，检查类级别的@RateLimit注解
+    RateLimit classRateLimit = controllerClass.getAnnotation(RateLimit.class);
+
+    // 3. 如果都没有限流注解，直接返回，不执行任何限流相关操作
+    if (methodRateLimit == null && classRateLimit == null) {
+      return;
+    }
+
+    // 4. 只有在有限流注解时才解析参数并执行限流检查
+    final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
+    final Object[] args = resolveMethodArguments(metadata, method, ctx);
+
+    // 5. 执行限流检查
+    rateLimitInterceptor.performRateLimitCheck(controllerClass, method, ctx, args);
   }
 }

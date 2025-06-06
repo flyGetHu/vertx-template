@@ -1,14 +1,14 @@
 package com.vertx.template.middleware.auth;
 
+import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.authenticator.NoAuthenticator;
 import com.vertx.template.middleware.auth.impl.JwtAuthenticator;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

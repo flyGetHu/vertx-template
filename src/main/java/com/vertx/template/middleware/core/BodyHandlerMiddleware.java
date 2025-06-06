@@ -1,12 +1,12 @@
 package com.vertx.template.middleware.core;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.common.Middleware;
 import com.vertx.template.middleware.common.MiddlewareResult;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

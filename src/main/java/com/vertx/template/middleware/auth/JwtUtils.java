@@ -1,13 +1,13 @@
 package com.vertx.template.middleware.auth;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import java.time.Instant;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -124,6 +124,9 @@ public class RouterRegistry {
     mainRouter.errorHandler(
         statusCode,
         ctx -> {
+          if (ctx.response().headWritten()) {
+            return;
+          }
           ctx.response()
               .setStatusCode(HTTP_OK)
               .putHeader(CONTENT_TYPE_HEADER, APPLICATION_JSON)

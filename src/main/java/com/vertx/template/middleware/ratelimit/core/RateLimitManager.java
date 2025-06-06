@@ -1,5 +1,6 @@
 package com.vertx.template.middleware.ratelimit.core;
 
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimit;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimitType;
 import com.vertx.template.middleware.ratelimit.impl.FixedWindowRateLimiter;
@@ -9,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**

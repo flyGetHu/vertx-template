@@ -1,5 +1,7 @@
 package com.vertx.template.controller;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.UserContext;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.CurrentUser;
@@ -9,8 +11,6 @@ import com.vertx.template.repository.UserRepository;
 import com.vertx.template.router.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

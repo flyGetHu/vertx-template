@@ -1,10 +1,10 @@
 package com.vertx.template.middleware.auth.authenticator;
 
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.AuthenticationException;
 import com.vertx.template.middleware.auth.Authenticator;
 import com.vertx.template.middleware.auth.UserContext;
 import io.vertx.ext.web.RoutingContext;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

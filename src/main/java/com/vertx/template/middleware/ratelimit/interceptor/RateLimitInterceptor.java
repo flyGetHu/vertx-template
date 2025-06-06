@@ -1,5 +1,7 @@
 package com.vertx.template.middleware.ratelimit.interceptor;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.exception.RateLimitException;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimit;
 import com.vertx.template.middleware.ratelimit.core.RateLimitKeyGenerator;
@@ -7,8 +9,6 @@ import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.core.RateLimitResult;
 import io.vertx.ext.web.RoutingContext;
 import java.lang.reflect.Method;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**

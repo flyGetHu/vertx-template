@@ -1,5 +1,7 @@
 package com.vertx.template.repository.impl;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.vertx.template.config.DatabaseConfig;
 import com.vertx.template.model.entity.User;
 import com.vertx.template.repository.UserRepository;
@@ -12,8 +14,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

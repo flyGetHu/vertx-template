@@ -1,11 +1,11 @@
 package com.vertx.template.middleware.response;
 
+import com.google.inject.Singleton;
 import com.vertx.template.model.dto.ApiResponse;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
 import java.util.function.Function;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,12 +52,22 @@ public class ResponseHandler {
   /** 发送响应 */
   private void sendResponse(RoutingContext ctx, Object response) {
     try {
+      // 先进行JSON序列化检查，避免响应头发送后再出现序列化异常
+      String jsonResponse = Json.encodePrettily(response);
+
+      // 检查响应是否已发送（防止重复发送）
+      if (ctx.response().headWritten()) {
+        logger.warn("响应头已发送，跳过重复响应发送");
+        return;
+      }
+
       ctx.response()
           .putHeader("content-type", "application/json")
           .setStatusCode(200)
-          .end(Json.encodePrettily(response));
+          .end(jsonResponse);
     } catch (Exception e) {
       // 序列化异常交给全局异常处理器处理
+      logger.error("响应序列化失败", e);
       ctx.fail(e);
     }
   }

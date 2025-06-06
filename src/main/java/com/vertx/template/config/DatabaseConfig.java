@@ -1,13 +1,13 @@
 package com.vertx.template.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mysqlclient.MySQLConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

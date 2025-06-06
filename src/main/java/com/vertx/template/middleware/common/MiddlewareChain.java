@@ -1,10 +1,10 @@
 package com.vertx.template.middleware.common;
 
+import com.google.inject.Singleton;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**

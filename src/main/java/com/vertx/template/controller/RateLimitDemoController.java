@@ -1,5 +1,6 @@
 package com.vertx.template.controller;
 
+import com.google.inject.Singleton;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimit;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimitDimension;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimitType;
@@ -11,7 +12,6 @@ import com.vertx.template.router.annotation.RestController;
 import io.vertx.ext.web.RoutingContext;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**
