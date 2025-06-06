@@ -16,15 +16,21 @@ logging:
 # CORS配置
 cors:
   enabled: true
-  allowed_origins: "*"
+  allowed_origins: "*"  # 生产环境请设置具体域名
   allowed_methods:
     - GET
     - POST
     - PUT
     - DELETE
+    - OPTIONS
   allowed_headers:
     - Content-Type
     - Authorization
+    - Access-Control-Allow-Method
+    - Access-Control-Allow-Origin
+    - Access-Control-Allow-Credentials
+  allow_credentials: false  # 是否允许发送凭证
+  max_age: 86400  # 预检请求缓存时间（秒）
 
 # 数据库配置
 database:

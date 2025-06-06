@@ -24,25 +24,90 @@ alwaysApply: false
 ```
 src/main/java/com/vertx/template/
 ├── Run.java                    # 应用入口
-├── MainVerticle.java           # 主Verticle
-├── config/
-│   └── ConfigLoader.java       # 配置加载器
+├── config/                     # 配置模块
+│   ├── ConfigLoader.java       # 配置加载器
+│   ├── DatabaseConfig.java     # 数据库配置
+│   ├── JacksonConfig.java      # JSON序列化配置
+│   └── RouterConfig.java       # 路由配置
 ├── controller/                 # 控制器层（Web层）
+│   ├── AuthController.java     # 认证控制器
+│   ├── ProductController.java  # 产品控制器
+│   ├── PublicController.java   # 公开接口控制器
+│   ├── TestController.java     # 测试控制器
+│   └── UserController.java     # 用户控制器
 ├── service/                    # 服务层（业务逻辑层）
-│   └── impl/                   # 服务实现类
+│   ├── impl/                   # 服务实现类
+│   └── UserService.java        # 用户服务接口
 ├── repository/                 # 数据访问层（持久层）
-│   └── impl/                   # 数据访问实现类
+│   ├── common/                 # 通用仓储接口
+│   │   └── BaseRepository.java # 基础仓储接口
+│   ├── impl/                   # 数据访问实现类
+│   └── UserRepository.java     # 用户仓储接口
 ├── model/                      # 数据模型层
+│   ├── annotation/             # 自定义注解
+│   │   ├── Column.java         # 列映射注解
+│   │   ├── Id.java             # 主键注解
+│   │   └── Table.java          # 表映射注解
 │   ├── dto/                    # 数据传输对象（Data Transfer Object）
+│   │   ├── ApiResponse.java    # 统一API响应格式
+│   │   └── UserDto.java        # 用户DTO
 │   ├── entity/                 # 数据库实体对象
+│   │   ├── BaseEntity.java     # 基础实体类
+│   │   ├── Product.java        # 产品实体
+│   │   └── User.java           # 用户实体
 │   ├── vo/                     # 视图对象（View Object）
 │   └── bo/                     # 业务对象（Business Object）
 ├── router/                     # 路由系统
-├── handler/                    # 处理器
+│   ├── annotation/             # 路由注解
+│   │   ├── GetMapping.java     # GET请求映射
+│   │   ├── PostMapping.java    # POST请求映射
+│   │   ├── RequestMapping.java # 请求映射基础注解
+│   │   └── RestController.java # REST控制器注解
+│   ├── cache/                  # 路由缓存
+│   │   ├── MethodMetadata.java # 方法元数据
+│   │   └── ReflectionCache.java# 反射缓存
+│   └── handler/                # 路由处理器
+│       └── AnnotationRouterHandler.java # 注解路由处理器
+├── middleware/                 # 中间件系统
+│   ├── auth/                   # 认证中间件
+│   │   ├── annotation/         # 认证注解
+│   │   │   ├── AuthType.java   # 认证类型枚举
+│   │   │   └── RequireAuth.java# 认证注解
+│   │   ├── authenticator/      # 认证器实现
+│   │   └── AuthenticationManager.java # 认证管理器
+│   ├── ratelimit/              # 限流中间件
+│   │   ├── annotation/         # 限流注解
+│   │   │   ├── RateLimit.java  # 限流注解
+│   │   │   ├── RateLimitDimension.java # 限流维度
+│   │   │   └── RateLimitType.java # 限流算法类型
+│   │   ├── core/               # 限流核心实现
+│   │   │   ├── RateLimiter.java# 限流器接口
+│   │   │   ├── RateLimitManager.java # 限流管理器
+│   │   │   ├── RateLimitResult.java # 限流结果
+│   │   │   └── RateLimitKeyGenerator.java # 限流键生成器
+│   │   ├── interceptor/        # 限流拦截器
+│   │   │   └── RateLimitInterceptor.java # 限流拦截器
+│   │   └── impl/               # 限流算法实现
+│   ├── core/                   # 核心中间件
+│   │   ├── impl/               # 中间件实现
+│   │   │   └── CorsMiddleware.java # CORS中间件
+│   │   └── MiddlewareChain.java# 中间件链
+│   └── GlobalMiddleware.java   # 全局中间件管理器
+├── di/                         # 依赖注入模块
+│   └── AppModule.java          # 应用模块配置
 ├── exception/                  # 异常定义
-├── enums/                      # 枚举类
+│   ├── BusinessException.java  # 业务异常
+│   ├── RateLimitException.java # 限流异常
+│   ├── SystemException.java    # 系统异常
+│   └── ValidationException.java# 验证异常
 ├── constants/                  # 常量定义
-└── utils/                      # 工具类
+│   ├── HttpConstants.java      # HTTP常量
+│   └── RouterConstants.java    # 路由常量
+├── utils/                      # 工具类
+├── examples/                   # 示例代码
+│   └── CodeStyleExample.java  # 代码风格示例
+└── verticle/                   # Verticle组件
+    └── MainVerticle.java       # 主Verticle
 ```
 
 ### 阿里巴巴分层架构规范
@@ -476,6 +541,8 @@ public class UserController {
 | `@RequestMapping` | 定义基础路径   | `@RequestMapping("/api/users")`       |
 | `@GetMapping`     | GET请求映射    | `@GetMapping("/:id")`                 |
 | `@PostMapping`    | POST请求映射   | `@PostMapping("")`                    |
+| `@PutMapping`     | PUT请求映射    | `@PutMapping("/:id")`                 |
+| `@DeleteMapping`  | DELETE请求映射 | `@DeleteMapping("/:id")`              |
 | `@PathParam`      | 路径参数       | `@PathParam("id") String id`          |
 | `@QueryParam`     | 查询参数       | `@QueryParam("name") String name`     |
 | `@RequestBody`    | 请求体         | `@RequestBody User user`              |
@@ -589,6 +656,124 @@ public User createUser(@Valid @RequestBody CreateUserRequest request) {
 | `@Column` | 特殊情况下指定列名或属性 | `@Column(value = "created_at", updatable = false)` |
 | `@Id`     | 标识主键字段             | `@Id private Long id;`                             |
 
+### 🔐 认证与授权系统
+
+#### 认证注解
+| 注解          | 用途               | 示例                                    |
+| ------------- | ------------------ | --------------------------------------- |
+| `@RequireAuth`| 标记需要认证的接口 | `@RequireAuth(AuthType.JWT)`            |
+| `AuthType`    | 认证类型枚举       | `JWT`, `BASIC`, `NONE`                  |
+
+#### 认证类型
+| 类型    | 说明           | 使用场景                 |
+| ------- | -------------- | ------------------------ |
+| `JWT`   | JWT令牌认证    | 标准API认证（默认）      |
+| `BASIC` | 基础认证       | 简单的用户名密码认证     |
+| `NONE`  | 无需认证       | 公开接口                 |
+
+#### 认证使用示例
+```java
+// 类级别认证 - 所有方法都需要JWT认证
+@RestController
+@RequestMapping("/api/users")
+@RequireAuth(AuthType.JWT)
+public class UserController {
+    // 所有方法都需要JWT认证
+}
+
+// 方法级别认证 - 覆盖类级别配置
+@RestController
+@RequestMapping("/api/public")
+@RequireAuth(AuthType.NONE) // 类级别：无需认证
+public class PublicController {
+    
+    @GetMapping("/info")
+    public String getInfo() {
+        // 继承类级别：无需认证
+        return "公开信息";
+    }
+    
+    @PostMapping("/sensitive")
+    @RequireAuth(AuthType.JWT) // 方法级别：需要JWT认证
+    public String getSensitiveData() {
+        // 覆盖类级别：需要JWT认证
+        return "敏感数据";
+    }
+}
+```
+
+### ⚡ 限流系统
+
+#### 限流注解
+| 注解        | 用途           | 示例                                           |
+| ----------- | -------------- | ---------------------------------------------- |
+| `@RateLimit`| 标记需要限流的接口 | `@RateLimit(limit=100, window=60)`        |
+
+#### 限流配置参数
+| 参数        | 类型           | 说明                     | 默认值        |
+| ----------- | -------------- | ------------------------ | ------------- |
+| `limit`     | int            | 限流阈值（请求数量）     | 100           |
+| `window`    | int            | 时间窗口（秒）           | 60            |
+| `timeUnit`  | TimeUnit       | 时间单位                 | SECONDS       |
+| `type`      | RateLimitType  | 限流算法类型             | FIXED_WINDOW  |
+| `dimension` | RateLimitDimension | 限流维度             | IP            |
+| `message`   | String         | 限流提示信息             | "请求过于频繁" |
+
+#### 限流算法类型
+| 类型           | 说明                     | 适用场景               |
+| -------------- | ------------------------ | ---------------------- |
+| `FIXED_WINDOW` | 固定窗口算法             | 简单限流场景           |
+| `SLIDING_WINDOW` | 滑动窗口算法           | 精确限流场景           |
+| `TOKEN_BUCKET` | 令牌桶算法               | 允许突发流量           |
+| `LEAKY_BUCKET` | 漏桶算法                 | 平滑限流               |
+
+#### 限流维度
+| 维度       | 说明                     | 使用场景               |
+| ---------- | ------------------------ | ---------------------- |
+| `IP`       | 基于客户端IP地址限流     | 防止单个IP恶意请求     |
+| `USER`     | 基于用户ID限流           | 防止单个用户过度使用   |
+| `API`      | 基于API接口限流          | 保护特定接口           |
+| `GLOBAL`   | 全局限流                 | 保护整体系统资源       |
+
+#### 限流使用示例
+```java
+@RestController
+@RequestMapping("/api/users")
+@RateLimit(limit = 1000, window = 3600) // 类级别：每小时1000次
+public class UserController {
+    
+    @GetMapping("")
+    public List<User> getUsers() {
+        // 继承类级别限流：每小时1000次
+        return userService.getUsers();
+    }
+    
+    @PostMapping("")
+    @RateLimit(
+        limit = 10,
+        window = 60,
+        dimension = RateLimitDimension.USER,
+        message = "创建用户过于频繁，请稍后再试"
+    )
+    public User createUser(@RequestBody User user) {
+        // 方法级别限流：每分钟10次，按用户限流
+        return userService.createUser(user);
+    }
+    
+    @PostMapping("/batch")
+    @RateLimit(
+        limit = 5,
+        window = 300,
+        type = RateLimitType.TOKEN_BUCKET,
+        dimension = RateLimitDimension.IP
+    )
+    public List<User> batchCreateUsers(@RequestBody List<User> users) {
+        // 批量操作：5分钟5次，令牌桶算法，按IP限流
+        return userService.batchCreateUsers(users);
+    }
+}
+```
+
 #### 命名转换规则
 | Java字段名  | 数据库列名   | 是否需要注解 | 说明                      |
 | ----------- | ------------ | ------------ | ------------------------- |
@@ -686,13 +871,16 @@ int port = config.getJsonObject("server").getInteger("port", 8888);
 本项目采用现代化的Java技术栈，结合Vert.x的响应式特性和注解驱动的开发模式，实现高性能、易维护的Web应用。
 
 ### 核心特性
-- **🚀 高性能**：基于Vert.x事件循环和虚拟线程
+- **🚀 高性能**：基于Vert.x事件循环和JDK21虚拟线程
 - **📝 注解驱动**：类似Spring Boot的开发体验
 - **🔧 依赖注入**：Google Guice提供IoC容器
 - **⚡ 异步编程**：Future.await()简化异步调用
 - **🛡️ 统一异常处理**：全局异常处理和响应包装
 - **✅ 数据验证**：Bean Validation自动参数校验
 - **🗄️ 数据库映射**：基于注解的ORM映射，约定优于配置
+- **🔐 认证授权**：基于注解的多类型认证系统
+- **⚡ 智能限流**：多算法、多维度的限流保护
+- **🌐 中间件系统**：模块化的中间件架构
 - **📊 结构化日志**：完善的日志记录规范
 - **⚙️ 配置管理**：YAML配置文件支持
 - **📋 阿里巴巴规范**：严格遵循阿里巴巴Java开发手册
@@ -702,9 +890,12 @@ int port = config.getJsonObject("server").getInteger("port", 8888);
 2. **实现Repository**：数据访问层，处理数据库操作
 3. **编写Service**：业务逻辑层，处理核心业务
 4. **创建Controller**：控制器层，处理HTTP请求
-5. **配置路由**：自动扫描注册路由映射
-6. **异常处理**：全局异常处理器自动处理
-7. **响应包装**：统一的API响应格式
+5. **配置认证**：使用@RequireAuth注解配置接口认证
+6. **配置限流**：使用@RateLimit注解配置接口限流
+7. **配置路由**：自动扫描注册路由映射
+8. **异常处理**：全局异常处理器自动处理
+9. **响应包装**：统一的API响应格式
+10. **中间件配置**：根据需要配置CORS、日志等中间件
 
 ### 阿里巴巴Java开发规范最佳实践
 

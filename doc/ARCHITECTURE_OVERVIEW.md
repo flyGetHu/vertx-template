@@ -9,6 +9,7 @@
 - [重构成果](#重构成果)
 - [架构文档索引](#架构文档索引)
 - [开发规范](#开发规范)
+- [相关文档](#相关文档)
 
 ## 🎯 项目概述
 
@@ -131,20 +132,39 @@ Exception
 
 ### 代码结构规范
 
+项目采用标准的分层架构设计，详细的目录结构请参考 [项目结构文档](PROJECT_STRUCTURE.md)。
+
+#### 核心模块概览
+
 ```
 src/main/java/com/vertx/template/
-├── router/              # 路由模块
-│   ├── handler/         # 路由处理器
-│   ├── scanner/         # 路由扫描器
-│   ├── resolver/        # 参数解析器
-│   └── executor/        # 请求执行器
-├── middleware/          # 中间件模块
-│   ├── auth/           # 认证中间件
-│   ├── ratelimit/      # 限流中间件
-│   └── response/       # 响应中间件
-├── controller/          # 控制器层
-├── service/            # 服务层
-└── config/             # 配置类
+├── Run.java                    # 应用程序入口
+├── config/                     # 配置模块
+├── controller/                 # 控制器层 (Web层)
+├── service/                    # 服务层 (业务逻辑层)
+│   └── impl/                   # 服务实现
+├── repository/                 # 数据访问层 (DAO层)
+│   ├── common/                 # 通用仓储
+│   └── impl/                   # 仓储实现
+├── model/                      # 数据模型层
+│   ├── entity/                 # 数据库实体
+│   ├── dto/                    # 数据传输对象
+│   └── context/                # 上下文对象
+├── router/                     # 路由系统
+│   ├── handler/                # 路由处理器
+│   ├── scanner/                # 路由扫描器
+│   ├── resolver/               # 参数解析器
+│   ├── executor/               # 请求执行器
+│   └── cache/                  # 路由缓存
+├── middleware/                 # 中间件模块
+│   ├── auth/                   # 认证中间件
+│   ├── ratelimit/              # 限流中间件
+│   ├── response/               # 响应中间件
+│   └── validation/             # 验证中间件
+├── di/                         # 依赖注入模块
+├── exception/                  # 异常定义
+├── utils/                      # 工具类
+└── verticle/                   # Verticle模块
 ```
 
 ### 命名规范
@@ -199,6 +219,28 @@ public class ParameterResolver {
 - [ ] 集成分布式链路追踪
 - [ ] 实现自动化运维工具
 
+## 📖 相关文档
+
+### 详细文档索引
+
+| 文档类型       | 文档名称                                        | 描述                           |
+| -------------- | ----------------------------------------------- | ------------------------------ |
+| **项目结构**   | [项目结构文档](PROJECT_STRUCTURE.md)           | 详细的代码结构和组织方式       |
+| **核心架构**   | [路由器架构设计](modules/router-architecture.md) | 路由器模块重构详细设计         |
+| **功能模块**   | [依赖注入指南](dependency-injection.md)        | Guice依赖注入配置和使用        |
+| **安全认证**   | [安全模块文档](SECURITY_README.md)             | 认证和授权机制                 |
+| **限流控制**   | [限流模块文档](RATELIMIT_README.md)            | 限流策略和配置                 |
+| **注解使用**   | [注解使用指南](ANNOTATION_USAGE.md)            | 项目注解使用规范               |
+| **中间件**     | [中间件集成文档](middleware-integration.md)    | 中间件架构和集成方案           |
+
+### 开发指南
+
+- **新手入门**: 建议先阅读 [项目结构文档](PROJECT_STRUCTURE.md) 了解整体架构
+- **功能开发**: 参考 [注解使用指南](ANNOTATION_USAGE.md) 和 [依赖注入指南](dependency-injection.md)
+- **安全集成**: 查看 [安全模块文档](SECURITY_README.md) 了解认证授权机制
+- **性能优化**: 参考 [限流模块文档](RATELIMIT_README.md) 配置限流策略
+
 ---
 
-**📝 维护说明**: 本文档随架构演进持续更新，最后更新时间：2024年
+**📝 维护说明**: 本文档随架构演进持续更新，最后更新时间：2024年12月
+**🔗 详细结构**: 完整的项目结构请参考 [项目结构文档](PROJECT_STRUCTURE.md)

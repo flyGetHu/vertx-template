@@ -5,7 +5,9 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.vertx.template.config.DatabaseConfig;
 import com.vertx.template.config.RouterConfig;
+import com.vertx.template.middleware.GlobalMiddleware;
 import com.vertx.template.middleware.auth.AuthenticationManager;
+import com.vertx.template.middleware.core.impl.CorsMiddleware;
 import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.repository.UserRepository;
@@ -84,5 +86,17 @@ public class AppModule extends AbstractModule {
   @Singleton
   public ReflectionCache provideReflectionCache() {
     return new ReflectionCache();
+  }
+
+  @Provides
+  @Singleton
+  public CorsMiddleware provideCorsMiddleware(JsonObject config) {
+    return new CorsMiddleware(config);
+  }
+
+  @Provides
+  @Singleton
+  public GlobalMiddleware provideGlobalMiddleware(CorsMiddleware corsMiddleware) {
+    return new GlobalMiddleware(corsMiddleware);
   }
 }

@@ -8,6 +8,7 @@ import static com.vertx.template.constants.RouterConstants.*;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
+import com.vertx.template.middleware.GlobalMiddleware;
 import com.vertx.template.middleware.exception.GlobalExceptionHandler;
 import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.router.handler.AnnotationRouterHandler;
@@ -36,6 +37,7 @@ public class RouterRegistry {
   private final JsonObject config;
   private final Injector injector;
   private final Router mainRouter;
+  private final GlobalMiddleware globalMiddleware;
 
   /**
    * 构造函数
@@ -50,6 +52,7 @@ public class RouterRegistry {
     // 创建Guice注入器
     this.injector = Guice.createInjector(new AppModule(vertx, config));
     this.mainRouter = injector.getInstance(Router.class);
+    this.globalMiddleware = injector.getInstance(GlobalMiddleware.class);
   }
 
   /**
@@ -58,6 +61,9 @@ public class RouterRegistry {
    * @return 配置好的Router实例
    */
   public Router registerAll() {
+    // 注册全局中间件（应最先执行）
+    registerGlobalMiddlewares();
+
     // 注册基于注解的路由
     registerAnnotationRoutes();
 
@@ -65,6 +71,16 @@ public class RouterRegistry {
     registerExceptionHandler();
 
     return mainRouter;
+  }
+
+  /** 注册全局中间件 */
+  private void registerGlobalMiddlewares() {
+    try {
+      globalMiddleware.applyTo(mainRouter);
+      logger.info("全局中间件注册成功");
+    } catch (Exception e) {
+      logger.error("全局中间件注册失败", e);
+    }
   }
 
   /** 注册基于注解的路由 */
