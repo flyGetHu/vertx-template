@@ -1,38 +1,93 @@
 # 路由模块设计指南
 
-本文档描述了Vert.x项目中路由模块的设计架构、优化策略和最佳实践。
+本文档描述了Vert.x项目中路由模块的设计架构、重构优化和最佳实践。
+
+> 📚 **相关文档**: 详细的架构设计请参考 [路由器架构设计文档](modules/router-architecture.md)
 
 ## 📋 目录
 
 1. [模块架构](#模块架构)
-2. [常量提取优化](#常量提取优化)
-3. [错误处理器优化](#错误处理器优化)
-4. [设计原则](#设计原则)
-5. [使用指南](#使用指南)
+2. [重构成果](#重构成果)
+3. [常量提取优化](#常量提取优化)
+4. [错误处理器优化](#错误处理器优化)
+5. [设计原则](#设计原则)
+6. [使用指南](#使用指南)
 
 ---
 
 ## 模块架构
 
-### 核心组件
+### 重构后组件结构
 
 ```
 router/
-├── RouterRegistry.java          # 路由注册中心（核心类）
-├── GlobalMiddleware.java        # 全局中间件配置
 ├── handler/
-│   └── AnnotationRouterHandler.java  # 注解路由处理器
-└── router-module.md            # 设计文档
+│   └── AnnotationRouterHandler.java     # 路由协调器（重构）
+├── scanner/
+│   └── RouteScanner.java               # 路由扫描器（新增）
+├── resolver/
+│   └── ParameterResolver.java          # 参数解析器（新增）
+├── executor/
+│   └── RequestExecutor.java            # 请求执行器（新增）
+├── cache/
+│   └── ReflectionCache.java            # 反射缓存
+└── annotation/
+    ├── RestController.java              # 控制器注解
+    ├── RequestMapping.java              # 请求映射注解
+    └── ...                             # 其他注解
 ```
 
 ### 职责分工
 
-| 组件                        | 职责                                  | 设计模式 |
-| --------------------------- | ------------------------------------- | -------- |
-| **RouterRegistry**          | 路由注册中心，统一管理所有路由模块    | 门面模式 |
-| **GlobalMiddleware**        | 全局中间件配置（CORS、BodyHandler等） | 配置模式 |
-| **AnnotationRouterHandler** | 基于注解的路由自动注册                | 反射模式 |
-| **GlobalExceptionHandler**  | 全局异常处理                          | 策略模式 |
+| 组件                        | 职责                           | 代码行数 | 设计模式 |
+| --------------------------- | ------------------------------ | -------- | -------- |
+| **AnnotationRouterHandler** | 路由注册协调，组件整合         | ~290行   | 门面模式 |
+| **RouteScanner**            | 控制器扫描，注解检测           | ~65行    | 单一职责 |
+| **ParameterResolver**       | 参数解析，类型转换，参数验证   | ~318行   | 策略模式 |
+| **RequestExecutor**         | 方法执行，结果处理，异常标准化 | ~78行    | 命令模式 |
+
+---
+
+## 重构成果
+
+### 📊 重构对比
+
+| 维度         | 重构前           | 重构后               | 改进效果         |
+| ------------ | ---------------- | -------------------- | ---------------- |
+| **文件大小** | 813行单文件      | 4个文件，平均180行   | ✅ 符合≤800行规范 |
+| **职责数量** | 7个主要职责      | 每个组件1个主要职责  | ✅ 单一职责原则   |
+| **可测试性** | 困难（大量Mock） | 容易（组件独立测试） | ✅ 提升测试效率   |
+| **可扩展性** | 修改困难         | 组件化扩展           | ✅ 支持功能扩展   |
+| **代码重复** | 参数解析重复     | 统一解析逻辑         | ✅ DRY原则        |
+
+### 🎯 架构优势
+
+1. **职责明确**: 每个组件专注于特定功能
+2. **易于维护**: 独立组件便于修改和调试
+3. **高度可测试**: 组件化设计便于单元测试
+4. **支持扩展**: 新功能可通过扩展组件实现
+5. **性能优化**: 保持反射缓存，提升执行效率
+
+### 🔄 请求处理流程
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant H as AnnotationRouterHandler
+    participant A as AuthManager
+    participant R as RateLimiter
+    participant P as ParameterResolver
+    participant E as RequestExecutor
+
+    C->>H: HTTP请求
+    H->>A: 认证检查
+    H->>R: 限流检查
+    H->>P: 参数解析
+    P-->>H: 解析结果
+    H->>E: 执行方法
+    E-->>H: 执行结果
+    H-->>C: HTTP响应
+```
 
 ---
 

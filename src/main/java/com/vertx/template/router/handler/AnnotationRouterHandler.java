@@ -1,78 +1,66 @@
 package com.vertx.template.router.handler;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import com.vertx.template.config.RouterConfig;
-import com.vertx.template.exception.BusinessException;
 import com.vertx.template.exception.RateLimitException;
 import com.vertx.template.exception.RouteRegistrationException;
 import com.vertx.template.exception.ValidationException;
-import com.vertx.template.middleware.MiddlewareInitializer;
 import com.vertx.template.middleware.auth.AuthenticationException;
 import com.vertx.template.middleware.auth.AuthenticationManager;
-import com.vertx.template.middleware.auth.UserContext;
 import com.vertx.template.middleware.auth.annotation.AuthType;
-import com.vertx.template.middleware.auth.annotation.CurrentUser;
 import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.middleware.ratelimit.annotation.RateLimit;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.middleware.response.ResponseHandler;
-import com.vertx.template.middleware.validation.ValidationUtils;
 import com.vertx.template.router.annotation.*;
 import com.vertx.template.router.cache.MethodMetadata;
 import com.vertx.template.router.cache.ReflectionCache;
-import io.vertx.core.Future;
+import com.vertx.template.router.executor.RequestExecutor;
+import com.vertx.template.router.resolver.ParameterResolver;
+import com.vertx.template.router.scanner.RouteScanner;
 import io.vertx.core.Handler;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.validation.Valid;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** 注解路由处理器，负责扫描并注册带有路由注解的控制器方法 */
+/** 重构后的注解路由处理器，职责简化为路由协调和注册 @功能描述 协调各组件完成路由注册和请求处理 @职责范围 路由注册协调、请求分发、组件整合 */
 @Singleton
 public class AnnotationRouterHandler {
+
   private static final Logger logger = LoggerFactory.getLogger(AnnotationRouterHandler.class);
+
   private final Injector injector;
   private final ResponseHandler responseHandler;
-  private final ObjectMapper objectMapper;
-  private final RouterConfig routerConfig;
   private final ReflectionCache reflectionCache;
-  private final MiddlewareInitializer middlewareInitializer;
   private final AuthenticationManager authenticationManager;
   private final RateLimitInterceptor rateLimitInterceptor;
+  private final RouteScanner routeScanner;
+  private final ParameterResolver parameterResolver;
+  private final RequestExecutor requestExecutor;
 
   @Inject
   public AnnotationRouterHandler(
       Injector injector,
       ResponseHandler responseHandler,
-      RouterConfig routerConfig,
       ReflectionCache reflectionCache,
-      MiddlewareInitializer middlewareInitializer,
       AuthenticationManager authenticationManager,
-      RateLimitInterceptor rateLimitInterceptor) {
+      RateLimitInterceptor rateLimitInterceptor,
+      RouteScanner routeScanner,
+      ParameterResolver parameterResolver,
+      RequestExecutor requestExecutor) {
     this.injector = injector;
     this.responseHandler = responseHandler;
-    this.routerConfig = routerConfig;
     this.reflectionCache = reflectionCache;
-    this.middlewareInitializer = middlewareInitializer;
     this.authenticationManager = authenticationManager;
     this.rateLimitInterceptor = rateLimitInterceptor;
-    this.objectMapper = new ObjectMapper();
-    this.objectMapper.findAndRegisterModules(); // 注册时间模块等
+    this.routeScanner = routeScanner;
+    this.parameterResolver = parameterResolver;
+    this.requestExecutor = requestExecutor;
   }
 
   /**
@@ -83,10 +71,9 @@ public class AnnotationRouterHandler {
    */
   public void registerRoutes(Router router) {
     try {
-      logger.info("开始扫描并注册路由，扫描包: {}", routerConfig.getBasePackage());
+      logger.info("开始扫描并注册路由");
 
-      Reflections reflections = new Reflections(routerConfig.getBasePackage());
-      Set<Class<?>> controllerClasses = reflections.getTypesAnnotatedWith(RestController.class);
+      Set<Class<?>> controllerClasses = routeScanner.scanControllers();
 
       if (controllerClasses.isEmpty()) {
         logger.warn("未找到任何带有@RestController注解的控制器类，请检查包路径配置");
@@ -103,7 +90,6 @@ public class AnnotationRouterHandler {
         } catch (Exception e) {
           failureCount++;
           logger.error("注册控制器 [{}] 失败", controllerClass.getSimpleName(), e);
-          // 继续注册其他控制器，不因单个失败而中断整个过程
         }
       }
 
@@ -115,7 +101,7 @@ public class AnnotationRouterHandler {
 
       logger.info("基于注解的路由注册完成，共成功注册 {} 个控制器", successCount);
     } catch (RouteRegistrationException e) {
-      throw e; // 重新抛出路由注册异常
+      throw e;
     } catch (Exception e) {
       String errorMsg = "路由注册过程中发生严重异常: " + e.getMessage();
       logger.error(errorMsg, e);
@@ -123,72 +109,36 @@ public class AnnotationRouterHandler {
     }
   }
 
-  /**
-   * 注册单个控制器类中的所有路由方法
-   *
-   * @param router 路由器
-   * @param controllerClass 控制器类
-   * @throws RouteRegistrationException 控制器注册失败时抛出
-   */
+  /** 注册单个控制器类中的所有路由方法 */
   private void registerController(Router router, Class<?> controllerClass) {
     try {
-      // 获取控制器实例
-      Object controller;
-      try {
-        controller = injector.getInstance(controllerClass);
-      } catch (Exception e) {
-        throw new RouteRegistrationException(
-            String.format("无法创建控制器实例 [%s]: %s", controllerClass.getSimpleName(), e.getMessage()),
-            e);
-      }
+      Object controller = injector.getInstance(controllerClass);
 
-      // 获取类级别的RequestMapping注解
       String basePath = "";
       if (controllerClass.isAnnotationPresent(RequestMapping.class)) {
         RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
         basePath = requestMapping.value();
       }
 
-      // 处理所有方法
       int methodCount = 0;
       for (Method method : controllerClass.getMethods()) {
-        try {
-          if (processMethod(router, controller, method, basePath)) {
-            // 缓存方法的反射信息
-            reflectionCache.cacheMethod(method, controllerClass);
-            methodCount++;
-          }
-        } catch (Exception e) {
-          throw new RouteRegistrationException(
-              String.format(
-                  "注册控制器 [%s] 的方法 [%s] 失败: %s",
-                  controllerClass.getSimpleName(), method.getName(), e.getMessage()),
-              e);
+        if (processMethod(router, controller, method, basePath)) {
+          reflectionCache.cacheMethod(method, controllerClass);
+          methodCount++;
         }
       }
 
       logger.debug("控制器 [{}] 注册完成，共注册 {} 个路由方法", controllerClass.getSimpleName(), methodCount);
 
-    } catch (RouteRegistrationException e) {
-      throw e; // 重新抛出路由注册异常
     } catch (Exception e) {
       throw new RouteRegistrationException(
-          String.format("注册控制器 [%s] 时发生未知异常: %s", controllerClass.getSimpleName(), e.getMessage()),
+          String.format("注册控制器 [%s] 时发生异常: %s", controllerClass.getSimpleName(), e.getMessage()),
           e);
     }
   }
 
-  /**
-   * 处理控制器方法，注册对应的路由
-   *
-   * @param router 路由器
-   * @param controller 控制器实例
-   * @param method 控制器方法
-   * @param basePath 基础路径
-   * @return 是否成功注册了路由
-   */
+  /** 处理控制器方法，注册对应的路由 */
   private boolean processMethod(Router router, Object controller, Method method, String basePath) {
-    // 处理各种HTTP方法注解
     if (method.isAnnotationPresent(GetMapping.class)) {
       GetMapping mapping = method.getAnnotation(GetMapping.class);
       String path = combinePath(basePath, mapping.value());
@@ -216,10 +166,8 @@ public class AnnotationRouterHandler {
       Route route;
 
       if (mapping.method().length == 0) {
-        // 如果未指定方法，则默认注册所有方法
         route = router.route(path);
       } else {
-        // 注册指定的HTTP方法
         route = router.route(path);
         for (HttpMethod httpMethod : mapping.method()) {
           route.method(convertHttpMethod(httpMethod));
@@ -231,15 +179,103 @@ public class AnnotationRouterHandler {
       return true;
     }
 
-    return false; // 没有找到路由注解
+    return false;
   }
 
-  /** 将自定义HttpMethod转换为Vert.x的HttpMethod */
+  /** 为路由注册处理器 */
+  private void registerHandler(Route route, Object controller, Method method) {
+    if (needsBodyHandler(method)) {
+      route.handler(io.vertx.ext.web.handler.BodyHandler.create());
+    }
+
+    Handler<RoutingContext> handler = createHandler(controller, method);
+    route.handler(handler);
+  }
+
+  /** 创建路由处理器 */
+  private Handler<RoutingContext> createHandler(Object controller, Method method) {
+    return responseHandler.handle(
+        ctx -> {
+          try {
+            return executeRouteHandler(ctx, controller, method);
+          } catch (Exception e) {
+            logger.error("处理请求时发生异常", e);
+            throw e;
+          }
+        });
+  }
+
+  /** 执行路由处理逻辑 */
+  private Object executeRouteHandler(RoutingContext ctx, Object controller, Method method) {
+    try {
+      // 1. 执行认证检查
+      performAuthentication(ctx, controller.getClass(), method);
+
+      // 2. 执行限流检查
+      performRateLimitCheck(ctx, controller.getClass(), method);
+
+      // 3. 从缓存获取方法元数据
+      final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
+
+      // 4. 解析方法参数
+      final Object[] args = parameterResolver.resolveArguments(metadata, method, ctx);
+
+      // 5. 调用控制器方法并处理结果
+      return requestExecutor.execute(controller, method, args);
+
+    } catch (AuthenticationException | RateLimitException | ValidationException e) {
+      // 认证、限流、参数校验异常需要重新抛出，交给全局异常处理器处理
+      logger.debug("请求处理被中断: {}", e.getMessage());
+      throw e;
+    } catch (Exception e) {
+      // 其他异常进行标准化处理后重新抛出
+      logger.error("处理请求时发生异常", e);
+      Exception normalizedEx = requestExecutor.normalizeException(e);
+      if (normalizedEx instanceof RuntimeException) {
+        throw (RuntimeException) normalizedEx;
+      } else {
+        throw new RuntimeException(normalizedEx);
+      }
+    }
+  }
+
+  /** 执行认证检查 */
+  private void performAuthentication(RoutingContext ctx, Class<?> controllerClass, Method method) {
+    RequireAuth methodAuth = method.getAnnotation(RequireAuth.class);
+    RequireAuth classAuth = controllerClass.getAnnotation(RequireAuth.class);
+
+    AuthType authType = AuthType.JWT;
+    if (methodAuth != null) {
+      authType = methodAuth.value();
+    } else if (classAuth != null) {
+      authType = classAuth.value();
+    }
+
+    if (authType != AuthType.NONE) {
+      authenticationManager.authenticate(ctx, authType);
+    }
+  }
+
+  /** 执行限流检查 */
+  private void performRateLimitCheck(RoutingContext ctx, Class<?> controllerClass, Method method) {
+    RateLimit methodRateLimit = method.getAnnotation(RateLimit.class);
+    RateLimit classRateLimit = controllerClass.getAnnotation(RateLimit.class);
+
+    if (methodRateLimit == null && classRateLimit == null) {
+      return;
+    }
+
+    final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
+    final Object[] args = parameterResolver.resolveArguments(metadata, method, ctx);
+
+    rateLimitInterceptor.performRateLimitCheck(controllerClass, method, ctx, args);
+  }
+
+  // 工具方法
   private io.vertx.core.http.HttpMethod convertHttpMethod(HttpMethod method) {
     return io.vertx.core.http.HttpMethod.valueOf(method.name());
   }
 
-  /** 合并基础路径和方法路径 */
   private String combinePath(String basePath, String methodPath) {
     if (basePath.isEmpty()) {
       return methodPath;
@@ -258,544 +294,17 @@ public class AnnotationRouterHandler {
     }
   }
 
-  /** 为路由注册处理器 */
-  private void registerHandler(Route route, Object controller, Method method) {
-    Handler<RoutingContext> handler = createHandler(controller, method);
-    route.handler(handler);
+  private boolean needsBodyHandler(Method method) {
+    return method.isAnnotationPresent(PostMapping.class)
+        || method.isAnnotationPresent(PutMapping.class)
+        || hasRequestBodyParameter(method);
   }
 
-  /** 创建路由处理器 */
-  private Handler<RoutingContext> createHandler(Object controller, Method method) {
-    // 创建业务处理器
-    Handler<RoutingContext> businessHandler =
-        responseHandler.handle(
-            ctx -> {
-              try {
-                // 执行路由处理逻辑（不再包含中间件执行）
-                return executeRouteHandler(ctx, controller, method);
-              } catch (Exception e) {
-                logger.error("处理请求时发生异常", e);
-                return e;
-              }
-            });
-
-    // 使用MiddlewareInitializer的统一入口包装业务处理器
-    return middlewareInitializer.createRequestHandler(businessHandler);
-  }
-
-  /** 执行路由处理逻辑 */
-  private Object executeRouteHandler(RoutingContext ctx, Object controller, Method method) {
-    try {
-      // 1. 执行认证检查
-      performAuthentication(ctx, controller.getClass(), method);
-
-      // 2. 执行限流检查
-      performRateLimitCheck(ctx, controller.getClass(), method);
-
-      // 3. 从缓存获取方法元数据，避免重复反射
-      final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
-
-      // 4. 解析方法参数
-      final Object[] args = resolveMethodArguments(metadata, method, ctx);
-
-      // 5. 调用控制器方法并处理结果
-      Object result = invokeControllerMethod(controller, method, args);
-
-      return result;
-
-    } catch (Exception e) {
-      logger.error("处理请求时发生异常", e);
-      return normalizeException(e);
-    }
-  }
-
-  /** 解析方法参数 */
-  private Object[] resolveMethodArguments(
-      MethodMetadata metadata, Method method, RoutingContext ctx) {
-    if (metadata == null) {
-      return resolveMethodArgs(method, ctx);
-    }
-    return resolveMethodArgsFromCache(metadata, ctx);
-  }
-
-  /** 调用控制器方法并处理结果 */
-  private Object invokeControllerMethod(Object controller, Method method, Object[] args) {
-    try {
-      final Object result = method.invoke(controller, args);
-
-      // 处理Future结果
-      if (result instanceof Future<?> future) {
-        @SuppressWarnings("unchecked")
-        Future<Object> typedFuture = (Future<Object>) future;
-        return Future.await(typedFuture);
-      }
-
-      return result;
-    } catch (Exception e) {
-      return normalizeException(e);
-    }
-  }
-
-  /** 标准化异常处理 */
-  private Exception normalizeException(Exception e) {
-    return switch (e) {
-      case AuthenticationException authEx -> authEx;
-      case RateLimitException rateLimitEx -> rateLimitEx;
-      case ValidationException validationEx -> validationEx;
-      case BusinessException businessEx -> businessEx;
-      case Exception ex when ex.getCause() instanceof BusinessException ->
-          (BusinessException) ex.getCause();
-      case Exception ex when ex.getCause() instanceof AuthenticationException ->
-          (AuthenticationException) ex.getCause();
-      case Exception ex when ex.getCause() instanceof RateLimitException ->
-          (RateLimitException) ex.getCause();
-      case Exception ex when ex.getCause() instanceof ValidationException ->
-          (ValidationException) ex.getCause();
-      default -> new BusinessException(500, "Internal Server Error: " + e.getMessage());
-    };
-  }
-
-  /** 使用缓存的元数据解析方法参数 */
-  private Object[] resolveMethodArgsFromCache(MethodMetadata metadata, RoutingContext ctx) {
-    List<MethodMetadata.ParameterMetadata> parameters = metadata.getParameters();
-    Object[] args = new Object[parameters.size()];
-
-    for (int i = 0; i < parameters.size(); i++) {
-      MethodMetadata.ParameterMetadata paramMetadata = parameters.get(i);
-      args[i] = resolveParameterFromCache(paramMetadata, ctx);
-    }
-
-    return args;
-  }
-
-  /** 基于缓存元数据解析单个参数 */
-  private Object resolveParameterFromCache(
-      MethodMetadata.ParameterMetadata paramMetadata, RoutingContext ctx) {
-    return switch (paramMetadata.getParameterType()) {
-      case PATH_PARAM -> {
-        String value = ctx.pathParam(paramMetadata.getName());
-
-        // 检查参数长度限制
-        if (value != null
-            && routerConfig.isEnableParameterValidation()
-            && value.length() > routerConfig.getMaxParameterLength()) {
-          throw new ValidationException(
-              String.format(
-                  "路径参数 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                  paramMetadata.getName(), routerConfig.getMaxParameterLength(), value.length()));
-        }
-
-        yield convertValueSafely(value, paramMetadata.getType(), "路径参数 " + paramMetadata.getName());
-      }
-
-      case QUERY_PARAM -> {
-        String value = ctx.request().getParam(paramMetadata.getName());
-
-        if (value == null && paramMetadata.isRequired()) {
-          throw new ValidationException(String.format("查询参数 %s 不能为空", paramMetadata.getName()));
-        }
-
-        // 检查参数长度限制
-        if (value != null
-            && routerConfig.isEnableParameterValidation()
-            && value.length() > routerConfig.getMaxParameterLength()) {
-          throw new ValidationException(
-              String.format(
-                  "查询参数 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                  paramMetadata.getName(), routerConfig.getMaxParameterLength(), value.length()));
-        }
-
-        yield convertValueSafely(value, paramMetadata.getType(), "查询参数 " + paramMetadata.getName());
-      }
-
-      case HEADER_PARAM -> {
-        String value = ctx.request().getHeader(paramMetadata.getName());
-
-        if (value == null && paramMetadata.isRequired()) {
-          throw new ValidationException(String.format("请求头 %s 不能为空", paramMetadata.getName()));
-        }
-
-        // 检查参数长度限制
-        if (value != null
-            && routerConfig.isEnableParameterValidation()
-            && value.length() > routerConfig.getMaxParameterLength()) {
-          throw new ValidationException(
-              String.format(
-                  "请求头 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                  paramMetadata.getName(), routerConfig.getMaxParameterLength(), value.length()));
-        }
-
-        yield convertValueSafely(value, paramMetadata.getType(), "请求头 " + paramMetadata.getName());
-      }
-
-      case REQUEST_BODY -> {
-        try {
-          // 检查请求体大小限制
-          if (ctx.body() != null && ctx.body().length() > routerConfig.getMaxRequestBodySize()) {
-            throw new ValidationException(
-                String.format(
-                    "请求体大小超过限制，最大允许 %d 字节，实际 %d 字节",
-                    routerConfig.getMaxRequestBodySize(), ctx.body().length()));
-          }
-
-          JsonObject jsonBody = ctx.body().asJsonObject();
-          if (jsonBody == null || jsonBody.isEmpty()) {
-            throw new ValidationException("请求体不能为空");
-          }
-
-          // 使用Jackson ObjectMapper进行转换
-          Object body;
-          if (paramMetadata.getType() == JsonObject.class) {
-            body = jsonBody;
-          } else {
-            try {
-              String jsonString = jsonBody.encode();
-              body = objectMapper.readValue(jsonString, paramMetadata.getType());
-            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-              throw new ValidationException("请求体JSON格式错误: " + e.getMessage());
-            } catch (Exception e) {
-              throw new ValidationException("请求体转换失败: " + e.getMessage());
-            }
-          }
-
-          if (body == null) {
-            throw new ValidationException("请求体转换后为空");
-          }
-
-          // 检查是否需要校验
-          if (paramMetadata.isNeedsValidation() && routerConfig.isEnableParameterValidation()) {
-            try {
-              ValidationUtils.validate(body);
-            } catch (ValidationException e) {
-              throw e;
-            } catch (Exception e) {
-              throw new ValidationException("参数校验失败: " + e.getMessage());
-            }
-          }
-
-          yield body;
-        } catch (DecodeException e) {
-          throw new ValidationException("请求体JSON解析失败: " + e.getMessage());
-        } catch (ValidationException e) {
-          throw e;
-        } catch (Exception e) {
-          throw new ValidationException("处理请求体时发生异常: " + e.getMessage());
-        }
-      }
-
-      case CURRENT_USER -> {
-        yield ctx.get("currentUser");
-      }
-
-      case UNKNOWN -> {
-        if (paramMetadata.getType().equals(RoutingContext.class)) {
-          yield ctx;
-        } else {
-          yield null;
-        }
-      }
-    };
-  }
-
-  /** 解析方法参数 */
-  private Object[] resolveMethodArgs(Method method, RoutingContext ctx) {
-    Parameter[] parameters = method.getParameters();
-    Object[] args = new Object[parameters.length];
-    Annotation[][] paramAnnotations = method.getParameterAnnotations();
-
-    for (int i = 0; i < parameters.length; i++) {
-      Parameter parameter = parameters[i];
-      Class<?> paramType = parameter.getType();
-      Annotation[] annotations = paramAnnotations[i];
-
-      // 检查参数是否有注解
-      if (annotations.length > 0) {
-        args[i] = resolveAnnotatedParam(parameter, annotations, ctx);
-      } else if (paramType.equals(RoutingContext.class)) {
-        // 处理RoutingContext类型参数
-        args[i] = ctx;
-      } else {
-        // 对于没有注解的非RoutingContext参数，设为null
-        args[i] = null;
-      }
-    }
-
-    return args;
-  }
-
-  /** 解析带注解的参数 */
-  private Object resolveAnnotatedParam(
-      Parameter parameter, Annotation[] annotations, RoutingContext ctx) {
-    Class<?> paramType = parameter.getType();
-    Object result = null;
-
-    // 先找到主要参数注解（PathParam、QueryParam等）
-    for (Annotation annotation : annotations) {
-      if (annotation instanceof PathParam
-          || annotation instanceof QueryParam
-          || annotation instanceof RequestBody
-          || annotation instanceof HeaderParam
-          || annotation instanceof CurrentUser) {
-
-        result =
-            switch (annotation) {
-              case PathParam pathParam -> {
-                String name = pathParam.value().isEmpty() ? parameter.getName() : pathParam.value();
-                String value = ctx.pathParam(name);
-
-                // 检查参数长度限制
-                if (value != null
-                    && routerConfig.isEnableParameterValidation()
-                    && value.length() > routerConfig.getMaxParameterLength()) {
-                  throw new ValidationException(
-                      String.format(
-                          "路径参数 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                          name, routerConfig.getMaxParameterLength(), value.length()));
-                }
-
-                yield convertValueSafely(value, paramType, "路径参数 " + name);
-              }
-
-              case QueryParam queryParam -> {
-                String name =
-                    queryParam.value().isEmpty() ? parameter.getName() : queryParam.value();
-                String value = ctx.request().getParam(name);
-
-                if (value == null && queryParam.required()) {
-                  throw new ValidationException(String.format("查询参数 %s 不能为空", name));
-                }
-
-                // 检查参数长度限制
-                if (value != null
-                    && routerConfig.isEnableParameterValidation()
-                    && value.length() > routerConfig.getMaxParameterLength()) {
-                  throw new ValidationException(
-                      String.format(
-                          "查询参数 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                          name, routerConfig.getMaxParameterLength(), value.length()));
-                }
-
-                yield convertValueSafely(value, paramType, "查询参数 " + name);
-              }
-
-              case RequestBody ignored -> {
-                try {
-                  // 检查请求体大小限制
-                  if (ctx.body() != null
-                      && ctx.body().length() > routerConfig.getMaxRequestBodySize()) {
-                    throw new ValidationException(
-                        String.format(
-                            "请求体大小超过限制，最大允许 %d 字节，实际 %d 字节",
-                            routerConfig.getMaxRequestBodySize(), ctx.body().length()));
-                  }
-
-                  JsonObject jsonBody = ctx.body().asJsonObject();
-                  if (jsonBody == null || jsonBody.isEmpty()) {
-                    throw new ValidationException("请求体不能为空");
-                  }
-
-                  // 使用Jackson ObjectMapper进行转换，而不是直接使用mapTo
-                  Object body;
-                  if (paramType == JsonObject.class) {
-                    body = jsonBody;
-                  } else {
-                    try {
-                      // 先转换为JSON字符串，再使用Jackson反序列化
-                      String jsonString = jsonBody.encode();
-                      body = objectMapper.readValue(jsonString, paramType);
-                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                      throw new ValidationException("请求体JSON格式错误: " + e.getMessage());
-                    } catch (Exception e) {
-                      throw new ValidationException("请求体转换失败: " + e.getMessage());
-                    }
-                  }
-
-                  if (body == null) {
-                    throw new ValidationException("请求体转换后为空");
-                  }
-
-                  // 只在RequestBody注解上判断是否需要校验
-                  boolean needValidation =
-                      Arrays.stream(annotations).anyMatch(a -> a instanceof Valid);
-
-                  if (needValidation && routerConfig.isEnableParameterValidation()) {
-                    try {
-                      ValidationUtils.validate(body);
-                    } catch (ValidationException e) {
-                      throw e; // 重新抛出校验异常
-                    } catch (Exception e) {
-                      throw new ValidationException("参数校验失败: " + e.getMessage());
-                    }
-                  }
-
-                  yield body;
-                } catch (DecodeException e) {
-                  throw new ValidationException("请求体JSON解析失败: " + e.getMessage());
-                } catch (ValidationException e) {
-                  throw e; // 重新抛出校验异常
-                } catch (Exception e) {
-                  throw new ValidationException("处理请求体时发生异常: " + e.getMessage());
-                }
-              }
-
-              case HeaderParam headerParam -> {
-                String name =
-                    headerParam.value().isEmpty() ? parameter.getName() : headerParam.value();
-                String value = ctx.request().getHeader(name);
-
-                if (value == null && headerParam.required()) {
-                  throw new ValidationException(String.format("请求头 %s 不能为空", name));
-                }
-
-                // 检查参数长度限制
-                if (value != null
-                    && routerConfig.isEnableParameterValidation()
-                    && value.length() > routerConfig.getMaxParameterLength()) {
-                  throw new ValidationException(
-                      String.format(
-                          "请求头 %s 长度超过限制，最大允许 %d 字符，实际 %d 字符",
-                          name, routerConfig.getMaxParameterLength(), value.length()));
-                }
-
-                yield convertValueSafely(value, paramType, "请求头 " + name);
-              }
-
-              case CurrentUser ignored -> {
-                UserContext userContext = AuthenticationManager.getCurrentUser(ctx);
-                if (userContext == null) {
-                  throw new ValidationException("当前用户上下文不存在，请确保已通过认证");
-                }
-                yield userContext;
-              }
-
-              default -> null;
-            };
-
-        break; // 找到主参数注解后跳出
-      }
-    }
-
-    return result;
-  }
-
-  /** 安全转换字符串值为指定类型，提供详细的错误信息 */
-  private Object convertValueSafely(String value, Class<?> targetType, String parameterName) {
-    if (value == null) {
-      return null;
-    }
-
-    try {
-      return switch (targetType) {
-        case Class<?> clazz when clazz == String.class -> value;
-        case Class<?> clazz when clazz == Integer.class || clazz == int.class ->
-            parseInteger(value, parameterName);
-        case Class<?> clazz when clazz == Long.class || clazz == long.class ->
-            parseLong(value, parameterName);
-        case Class<?> clazz when clazz == Double.class || clazz == double.class ->
-            parseDouble(value, parameterName);
-        case Class<?> clazz when clazz == Boolean.class || clazz == boolean.class ->
-            Boolean.parseBoolean(value);
-        default -> parseComplexType(value, targetType, parameterName);
-      };
-    } catch (ValidationException e) {
-      throw e; // 重新抛出校验异常
-    } catch (Exception e) {
-      throw new ValidationException(
-          String.format(
-              "%s 类型转换失败: 无法将值 '%s' 转换为 %s 类型", parameterName, value, targetType.getSimpleName()));
-    }
-  }
-
-  private Integer parseInteger(String value, String parameterName) {
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException e) {
-      throw new ValidationException(
-          String.format("%s 格式错误: 无法将值 '%s' 转换为整数", parameterName, value));
-    }
-  }
-
-  private Long parseLong(String value, String parameterName) {
-    try {
-      return Long.parseLong(value);
-    } catch (NumberFormatException e) {
-      throw new ValidationException(
-          String.format("%s 格式错误: 无法将值 '%s' 转换为长整数", parameterName, value));
-    }
-  }
-
-  private Double parseDouble(String value, String parameterName) {
-    try {
-      return Double.parseDouble(value);
-    } catch (NumberFormatException e) {
-      throw new ValidationException(
-          String.format("%s 格式错误: 无法将值 '%s' 转换为浮点数", parameterName, value));
-    }
-  }
-
-  private Object parseComplexType(String value, Class<?> targetType, String parameterName) {
-    try {
-      return new JsonObject().put("value", value).mapTo(Map.class).get("value");
-    } catch (Exception e) {
-      throw new ValidationException(
-          String.format("%s 类型转换失败: 不支持的参数类型 %s", parameterName, targetType.getName()));
-    }
-  }
-
-  /**
-   * 执行认证检查
-   *
-   * @param ctx 路由上下文
-   * @param controllerClass 控制器类
-   * @param method 控制器方法
-   * @throws AuthenticationException 认证失败时抛出
-   */
-  private void performAuthentication(RoutingContext ctx, Class<?> controllerClass, Method method) {
-    // 1. 获取方法级别的@RequireAuth注解
-    RequireAuth methodAuth = method.getAnnotation(RequireAuth.class);
-
-    // 2. 如果方法级别没有，检查类级别的@RequireAuth注解
-    RequireAuth classAuth = controllerClass.getAnnotation(RequireAuth.class);
-
-    // 3. 确定最终的认证类型（方法级别优先）
-    AuthType authType = AuthType.JWT; // 默认需要JWT认证
-    if (methodAuth != null) {
-      authType = methodAuth.value();
-    } else if (classAuth != null) {
-      authType = classAuth.value();
-    }
-
-    // 4. 执行认证
-    if (authType != AuthType.NONE) {
-      authenticationManager.authenticate(ctx, authType);
-    }
-  }
-
-  /**
-   * 执行限流检查
-   *
-   * @param ctx 路由上下文
-   * @param controllerClass 控制器类
-   * @param method 控制器方法
-   * @throws RateLimitException 限流时抛出
-   */
-  private void performRateLimitCheck(RoutingContext ctx, Class<?> controllerClass, Method method) {
-    // 1. 获取方法级别的@RateLimit注解
-    RateLimit methodRateLimit = method.getAnnotation(RateLimit.class);
-
-    // 2. 如果方法级别没有，检查类级别的@RateLimit注解
-    RateLimit classRateLimit = controllerClass.getAnnotation(RateLimit.class);
-
-    // 3. 如果都没有限流注解，直接返回，不执行任何限流相关操作
-    if (methodRateLimit == null && classRateLimit == null) {
-      return;
-    }
-
-    // 4. 只有在有限流注解时才解析参数并执行限流检查
-    final MethodMetadata metadata = reflectionCache.getMethodMetadata(method);
-    final Object[] args = resolveMethodArguments(metadata, method, ctx);
-
-    // 5. 执行限流检查
-    rateLimitInterceptor.performRateLimitCheck(controllerClass, method, ctx, args);
+  private boolean hasRequestBodyParameter(Method method) {
+    return java.util.Arrays.stream(method.getParameters())
+        .anyMatch(
+            param ->
+                java.util.Arrays.stream(param.getAnnotations())
+                    .anyMatch(ann -> ann instanceof RequestBody));
   }
 }
