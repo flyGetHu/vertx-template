@@ -1,13 +1,13 @@
 package com.vertx.template.router;
 
 // 日志
+
 import static com.vertx.template.constants.HttpConstants.*;
 import static com.vertx.template.constants.RouterConstants.*;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
-import com.vertx.template.middleware.MiddlewareInitializer;
 import com.vertx.template.middleware.exception.GlobalExceptionHandler;
 import com.vertx.template.model.dto.ApiResponse;
 import com.vertx.template.router.handler.AnnotationRouterHandler;
@@ -58,9 +58,6 @@ public class RouterRegistry {
    * @return 配置好的Router实例
    */
   public Router registerAll() {
-    // 注册全局中间件
-    registerMiddlewares();
-
     // 注册基于注解的路由
     registerAnnotationRoutes();
 
@@ -68,19 +65,6 @@ public class RouterRegistry {
     registerExceptionHandler();
 
     return mainRouter;
-  }
-
-  /** 注册全局中间件 */
-  private void registerMiddlewares() {
-    try {
-      // 通过注入器获取中间件初始化器
-      MiddlewareInitializer middlewareInitializer =
-          injector.getInstance(MiddlewareInitializer.class);
-      middlewareInitializer.initialize();
-      logger.debug(LOG_MIDDLEWARES_REGISTERED);
-    } catch (Exception e) {
-      logger.error("注册全局中间件失败", e);
-    }
   }
 
   /** 注册基于注解的路由 */

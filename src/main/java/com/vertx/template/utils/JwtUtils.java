@@ -1,4 +1,4 @@
-package com.vertx.template.middleware.auth;
+package com.vertx.template.utils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;

@@ -2,10 +2,10 @@ package com.vertx.template.controller;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.vertx.template.middleware.auth.UserContext;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.CurrentUser;
 import com.vertx.template.middleware.auth.annotation.RequireAuth;
+import com.vertx.template.model.context.UserContext;
 import com.vertx.template.model.entity.User;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.router.annotation.*;

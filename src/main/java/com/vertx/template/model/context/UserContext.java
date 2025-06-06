@@ -1,4 +1,4 @@
-package com.vertx.template.middleware.auth;
+package com.vertx.template.model.context;
 
 /** 用户上下文，保存当前认证用户的信息 */
 public class UserContext {

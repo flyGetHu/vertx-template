@@ -6,10 +6,6 @@ import com.google.inject.Singleton;
 import com.vertx.template.config.DatabaseConfig;
 import com.vertx.template.config.RouterConfig;
 import com.vertx.template.middleware.auth.AuthenticationManager;
-import com.vertx.template.middleware.common.MiddlewareChain;
-import com.vertx.template.middleware.core.BodyHandlerMiddleware;
-import com.vertx.template.middleware.core.CorsMiddleware;
-import com.vertx.template.middleware.core.RequestLoggerMiddleware;
 import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
 import com.vertx.template.repository.UserRepository;
@@ -68,12 +64,6 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public MiddlewareChain provideMiddlewareChain() {
-    return new MiddlewareChain();
-  }
-
-  @Provides
-  @Singleton
   public AuthenticationManager provideAuthenticationManager(com.google.inject.Injector injector) {
     return new AuthenticationManager(injector);
   }
@@ -94,24 +84,5 @@ public class AppModule extends AbstractModule {
   @Singleton
   public ReflectionCache provideReflectionCache() {
     return new ReflectionCache();
-  }
-
-  // 核心中间件配置
-  @Provides
-  @Singleton
-  public CorsMiddleware provideCorsMiddleware(JsonObject config) {
-    return new CorsMiddleware(config);
-  }
-
-  @Provides
-  @Singleton
-  public BodyHandlerMiddleware provideBodyHandlerMiddleware(JsonObject config) {
-    return new BodyHandlerMiddleware(config);
-  }
-
-  @Provides
-  @Singleton
-  public RequestLoggerMiddleware provideRequestLoggerMiddleware(JsonObject config) {
-    return new RequestLoggerMiddleware(config);
   }
 }

@@ -2,13 +2,13 @@ package com.vertx.template.controller;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.vertx.template.middleware.auth.JwtUtils;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.router.annotation.PostMapping;
 import com.vertx.template.router.annotation.RequestBody;
 import com.vertx.template.router.annotation.RequestMapping;
 import com.vertx.template.router.annotation.RestController;
+import com.vertx.template.utils.JwtUtils;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

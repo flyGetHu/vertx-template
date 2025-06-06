@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.AuthenticationException;
 import com.vertx.template.middleware.auth.Authenticator;
-import com.vertx.template.middleware.auth.UserContext;
+import com.vertx.template.model.context.UserContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.PubSecKeyOptions;

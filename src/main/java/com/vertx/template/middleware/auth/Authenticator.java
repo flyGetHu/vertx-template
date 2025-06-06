@@ -1,5 +1,6 @@
 package com.vertx.template.middleware.auth;
 
+import com.vertx.template.model.context.UserContext;
 import io.vertx.ext.web.RoutingContext;
 
 /** 认证器接口，定义认证的统一规范 */

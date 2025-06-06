@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import com.vertx.template.middleware.auth.annotation.AuthType;
 import com.vertx.template.middleware.auth.authenticator.NoAuthenticator;
 import com.vertx.template.middleware.auth.impl.JwtAuthenticator;
+import com.vertx.template.model.context.UserContext;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
