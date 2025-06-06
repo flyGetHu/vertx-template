@@ -1,5 +1,7 @@
 package com.vertx.template.middleware.core;
 
+import com.vertx.template.config.ConfigLoader;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerFormat;
@@ -40,8 +42,10 @@ public class MiddlewareChain {
     middlewares.sort(Comparator.comparingInt(Middleware::getOrder));
 
     final Route route = router.route();
-    // 添加日志中间件
-    route.handler(LoggerHandler.create(true, LoggerFormat.SHORT));
+    
+    // 根据配置添加日志中间件
+    addLoggerMiddleware(route);
+    
     // 应用中间件到路由器
     for (Middleware middleware : middlewares) {
       route.handler(middleware::handle);
@@ -49,6 +53,41 @@ public class MiddlewareChain {
     }
 
     logger.info("已应用 {} 个中间件到路由器", middlewares.size());
+  }
+
+  /**
+   * 根据配置添加日志中间件
+   *
+   * @param route 路由实例
+   */
+  private void addLoggerMiddleware(Route route) {
+    final JsonObject config = ConfigLoader.getConfig();
+    final JsonObject loggingConfig = config.getJsonObject("logging", new JsonObject());
+    final JsonObject middlewareConfig = loggingConfig.getJsonObject("middleware", new JsonObject());
+    
+    // 检查是否启用日志中间件（默认启用）
+    final boolean enabled = middlewareConfig.getBoolean("enabled", true);
+    if (!enabled) {
+      logger.debug("日志中间件已禁用");
+      return;
+    }
+    
+    // 获取配置参数
+    final boolean immediate = middlewareConfig.getBoolean("immediate", true);
+    final String formatStr = middlewareConfig.getString("format", "SHORT");
+    
+    // 解析日志格式
+    LoggerFormat format;
+    try {
+      format = LoggerFormat.valueOf(formatStr.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      logger.warn("无效的日志格式: {}, 使用默认格式 SHORT", formatStr);
+      format = LoggerFormat.SHORT;
+    }
+    
+    // 添加日志中间件
+    route.handler(LoggerHandler.create(immediate, format));
+    logger.info("已启用HTTP请求日志中间件 - immediate: {}, format: {}", immediate, format);
   }
 
   /**

@@ -5,18 +5,16 @@ server:
 
 # 日志配置
 logging:
-  enabled: true
-  request_log: true
-  level: INFO
-  file:
-    enabled: true
-    directory: logs
-    filename: vertx-app.log
+  # HTTP请求日志中间件配置
+  middleware:
+    enabled: true # 是否启用HTTP请求日志中间件
+    immediate: true # 是否立即记录日志
+    format: SHORT # 日志格式: DEFAULT, SHORT, TINY, CUSTOM
 
 # CORS配置
 cors:
   enabled: true
-  allowed_origins: "*"  # 生产环境请设置具体域名
+  allowed_origins: "*" # 生产环境请设置具体域名
   allowed_methods:
     - GET
     - POST
@@ -29,8 +27,8 @@ cors:
     - Access-Control-Allow-Method
     - Access-Control-Allow-Origin
     - Access-Control-Allow-Credentials
-  allow_credentials: false  # 是否允许发送凭证
-  max_age: 86400  # 预检请求缓存时间（秒）
+  allow_credentials: false # 是否允许发送凭证
+  max_age: 86400 # 预检请求缓存时间（秒）
 
 # 数据库配置
 database:

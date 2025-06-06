@@ -2,17 +2,19 @@
 set -e
 
 echo "================ 代码检查 ================"
-echo "执行代码格式化和风格检查..."
-./mvnw spotless:check -q || {
-  echo "代码风格检查未通过，正在尝试自动修复..."
-  ./mvnw spotless:apply -q
-  if [ $? -ne 0 ]; then
-    echo "[ERROR] 代码格式化未通过，请修复后再提交。"
-    exit 1
-  fi
-  echo "✓ 代码自动格式化成功，请检查更改后再次提交"
-  exit 1  # 仍然退出，让用户检查自动修复的更改
-}
+echo "执行代码格式化..."
+./mvnw spotless:apply -q
+if [ $? -ne 0 ]; then
+  echo "[ERROR] 代码格式化失败，请检查代码后再提交。"
+  exit 1
+fi
 
-echo "✓ 代码检查通过，允许提交"
+echo "执行代码风格检查..."
+./mvnw spotless:check -q
+if [ $? -ne 0 ]; then
+  echo "[ERROR] 代码风格检查未通过，请修复后再提交。"
+  exit 1
+fi
+
+echo "✓ 代码格式化和检查通过，允许提交"
 echo "======================================="
