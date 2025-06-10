@@ -163,9 +163,11 @@ public class MQManager {
       }
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+      final QueueOptions options =
+          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer =
+          Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
@@ -173,7 +175,11 @@ public class MQManager {
       activeConsumers.put(consumerName, rabbitConsumer);
       monitor.registerConsumer(consumerName);
 
-      log.info("消费者 {} 启动成功 - 队列: {}, prefetch: {}", consumerName, annotation.queueName(), prefetchCount);
+      log.info(
+          "消费者 {} 启动成功 - 队列: {}, prefetch: {}",
+          consumerName,
+          annotation.queueName(),
+          prefetchCount);
 
     } catch (Exception cause) {
       log.error("启动消费者 {} 失败 - 请确保队列 {} 已存在", consumerName, annotation.queueName(), cause);
@@ -325,10 +331,16 @@ public class MQManager {
             final RabbitMQClient client = consumerClients.get(consumerName);
             if (client != null && client.isConnected()) {
               Future.await(client.basicAck(message.envelope().getDeliveryTag(), false));
-              log.debug("消息已确认 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag());
+              log.debug(
+                  "消息已确认 - 消费者: {}, deliveryTag: {}",
+                  consumerName,
+                  message.envelope().getDeliveryTag());
             }
           } catch (Exception ackException) {
-            log.error("确认消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
+            log.error(
+                "确认消息失败 - 消费者: {}, deliveryTag: {}",
+                consumerName,
+                message.envelope().getDeliveryTag(),
                 ackException);
           }
         }
@@ -355,16 +367,22 @@ public class MQManager {
               final RabbitMQClient client = consumerClients.get(consumerName);
               if (client != null && client.isConnected()) {
                 Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, false));
-                log.warn("消息重试次数已达上限，已拒绝 - 消费者: {}, deliveryTag: {}", consumerName,
+                log.warn(
+                    "消息重试次数已达上限，已拒绝 - 消费者: {}, deliveryTag: {}",
+                    consumerName,
                     message.envelope().getDeliveryTag());
               }
             } catch (Exception nackException) {
-              log.error("拒绝消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
+              log.error(
+                  "拒绝消息失败 - 消费者: {}, deliveryTag: {}",
+                  consumerName,
+                  message.envelope().getDeliveryTag(),
                   nackException);
             }
           } else {
             // 还可以重试，暂不确认消息，让重试机制处理
-            log.info("消息处理失败但可重试 - 消费者: {}, 当前重试次数: {}/{}", consumerName, currentRetries, maxRetries);
+            log.info(
+                "消息处理失败但可重试 - 消费者: {}, 当前重试次数: {}/{}", consumerName, currentRetries, maxRetries);
           }
         }
 
@@ -402,11 +420,16 @@ public class MQManager {
             final RabbitMQClient client = consumerClients.get(consumerName);
             if (client != null && client.isConnected()) {
               Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, false));
-              log.warn("消息异常处理重试次数已达上限，已拒绝 - 消费者: {}, deliveryTag: {}", consumerName,
+              log.warn(
+                  "消息异常处理重试次数已达上限，已拒绝 - 消费者: {}, deliveryTag: {}",
+                  consumerName,
                   message.envelope().getDeliveryTag());
             }
           } catch (Exception nackException) {
-            log.error("拒绝异常消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
+            log.error(
+                "拒绝异常消息失败 - 消费者: {}, deliveryTag: {}",
+                consumerName,
+                message.envelope().getDeliveryTag(),
                 nackException);
           }
         } else {
@@ -437,10 +460,16 @@ public class MQManager {
           final RabbitMQClient client = consumerClients.get(consumerName);
           if (client != null && client.isConnected()) {
             Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, false));
-            log.debug("未启用重试，消息已拒绝 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag());
+            log.debug(
+                "未启用重试，消息已拒绝 - 消费者: {}, deliveryTag: {}",
+                consumerName,
+                message.envelope().getDeliveryTag());
           }
         } catch (Exception nackException) {
-          log.error("拒绝消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
+          log.error(
+              "拒绝消息失败 - 消费者: {}, deliveryTag: {}",
+              consumerName,
+              message.envelope().getDeliveryTag(),
               nackException);
         }
       }
@@ -465,10 +494,16 @@ public class MQManager {
           final RabbitMQClient client = consumerClients.get(consumerName);
           if (client != null && client.isConnected()) {
             Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, false));
-            log.debug("重试次数已达上限，消息已拒绝 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag());
+            log.debug(
+                "重试次数已达上限，消息已拒绝 - 消费者: {}, deliveryTag: {}",
+                consumerName,
+                message.envelope().getDeliveryTag());
           }
         } catch (Exception nackException) {
-          log.error("拒绝消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
+          log.error(
+              "拒绝消息失败 - 消费者: {}, deliveryTag: {}",
+              consumerName,
+              message.envelope().getDeliveryTag(),
               nackException);
         }
       }
@@ -479,31 +514,48 @@ public class MQManager {
     if (!annotation.autoAck()) {
       final long retryDelay = annotation.retryDelayMs();
 
-      log.info("消费者 {} 将在 {}ms 后通过重新入队进行重试，当前重试次数: {}/{}, 原因: {}",
-          consumerName, retryDelay, currentRetries + 1, maxRetries, errorReason);
+      log.info(
+          "消费者 {} 将在 {}ms 后通过重新入队进行重试，当前重试次数: {}/{}, 原因: {}",
+          consumerName,
+          retryDelay,
+          currentRetries + 1,
+          maxRetries,
+          errorReason);
 
       // 延迟后重新入队
-      vertx.setTimer(retryDelay, timerId -> {
-        try {
-          final RabbitMQClient client = consumerClients.get(consumerName);
-          if (client != null && client.isConnected()) {
-            // 拒绝消息并重新入队，让消息重新被消费
-            Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, true));
-            monitor.recordRetry(consumerName);
-            log.debug("消息已重新入队进行重试 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag());
-          }
-        } catch (Exception nackException) {
-          log.error("重新入队消息失败 - 消费者: {}, deliveryTag: {}", consumerName, message.envelope().getDeliveryTag(),
-              nackException);
-        }
-      });
+      vertx.setTimer(
+          retryDelay,
+          timerId -> {
+            try {
+              final RabbitMQClient client = consumerClients.get(consumerName);
+              if (client != null && client.isConnected()) {
+                // 拒绝消息并重新入队，让消息重新被消费
+                Future.await(client.basicNack(message.envelope().getDeliveryTag(), false, true));
+                monitor.recordRetry(consumerName);
+                log.debug(
+                    "消息已重新入队进行重试 - 消费者: {}, deliveryTag: {}",
+                    consumerName,
+                    message.envelope().getDeliveryTag());
+              }
+            } catch (Exception nackException) {
+              log.error(
+                  "重新入队消息失败 - 消费者: {}, deliveryTag: {}",
+                  consumerName,
+                  message.envelope().getDeliveryTag(),
+                  nackException);
+            }
+          });
     } else {
       // 自动确认模式下，使用原有的延迟重新处理逻辑
       final int nextRetryCount = currentRetries + 1;
       final long retryDelay = annotation.retryDelayMs() * nextRetryCount; // 线性延迟
 
       log.info(
-          "消费者 {} 将在 {}ms 后进行第 {} 次重试，原因: {}", consumerName, retryDelay, nextRetryCount, errorReason);
+          "消费者 {} 将在 {}ms 后进行第 {} 次重试，原因: {}",
+          consumerName,
+          retryDelay,
+          nextRetryCount,
+          errorReason);
 
       vertx.setTimer(
           retryDelay,
