@@ -50,6 +50,23 @@ database:
   #   database: 0
   #   max_pool_size: 10
 
+# 消息队列配置
+mq:
+  rabbitmq:
+    enabled: true # 是否启用RabbitMQ
+    host: 127.0.0.1
+    port: 5672
+    user: admin
+    password: admin123
+    virtualHost: /
+    useSsl: false
+    connectionTimeout: 60000 # 连接超时时间（毫秒）
+    requestedHeartbeat: 60 # 心跳间隔（秒）
+    handshakeTimeout: 10000 # 握手超时时间（毫秒）
+    requestedChannelMax: 5 # 最大通道数
+    networkRecoveryInterval: 5000 # 网络恢复间隔（毫秒）
+    automaticRecovery: true # 是否自动恢复连接
+
 # 路由配置
 router:
   # 请求体最大大小（字节），默认1MB

@@ -22,7 +22,7 @@ public class RabbitMqConnectionManager {
   /**
    * 构造器
    *
-   * @param vertx Vert.x实例
+   * @param vertx  Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
@@ -36,15 +36,15 @@ public class RabbitMqConnectionManager {
    *
    * @return 初始化结果的Future
    */
-  public Future<Void> initialize() {
+  public void initialize() {
     if (initialized.get()) {
-      return Future.succeededFuture();
+      return;
     }
 
     log.info("正在初始化RabbitMQ连接管理器...");
 
     if (!config.isValid()) {
-      return Future.failedFuture(new IllegalArgumentException("RabbitMQ配置无效"));
+      throw new IllegalArgumentException("RabbitMQ配置无效");
     }
 
     try {
@@ -52,20 +52,16 @@ public class RabbitMqConnectionManager {
       client = RabbitMQClient.create(vertx, config.toVertxOptions());
 
       // 启动客户端连接
-      return client
-          .start()
-          .onSuccess(
-              v -> {
-                initialized.set(true);
-                log.info("RabbitMQ连接管理器初始化完成");
-              })
-          .onFailure(
-              cause -> {
-                log.error("初始化RabbitMQ连接管理器失败", cause);
-              });
+      Future.await(client.start());
+      // 测试连接
+      if (!client.isConnected()) {
+        throw new RuntimeException("RabbitMQ连接失败");
+      }
+      initialized.set(true);
+      log.info("RabbitMQ连接管理器初始化完成");
     } catch (Exception e) {
       log.error("创建RabbitMQ客户端失败", e);
-      return Future.failedFuture(e);
+      throw new RuntimeException("创建RabbitMQ客户端失败", e);
     }
   }
 
@@ -91,25 +87,16 @@ public class RabbitMqConnectionManager {
    *
    * @return 关闭结果的Future
    */
-  public Future<Void> close() {
+  public void close() {
     log.info("正在关闭RabbitMQ连接管理器...");
 
     if (client != null && client.isConnected()) {
-      return client
-          .stop()
-          .onSuccess(
-              v -> {
-                initialized.set(false);
-                log.info("RabbitMQ连接已关闭");
-              })
-          .onFailure(
-              cause -> {
-                log.error("关闭RabbitMQ连接失败", cause);
-              });
+      Future.await(client.stop());
+      initialized.set(false);
+      log.info("RabbitMQ连接已关闭");
+    } else {
+      log.warn("RabbitMQ连接已关闭");
     }
-
-    initialized.set(false);
-    return Future.succeededFuture();
   }
 
   /**
