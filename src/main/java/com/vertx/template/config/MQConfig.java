@@ -24,7 +24,8 @@ public class MQConfig {
       final JsonObject mqConfig = config.getJsonObject("mq");
 
       if (mqConfig == null) {
-        logger.warn("MQ configuration ('mq') is missing from the config file, using default MQ settings.");
+        logger.warn(
+            "MQ configuration ('mq') is missing from the config file, using default MQ settings.");
         this.rabbitMQConfig = new RabbitMqConfig(); // Use default config
         return;
       }

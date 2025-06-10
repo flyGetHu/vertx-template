@@ -5,17 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * 简化的RabbitMQ消费者注解
- * 只保留基础的消费者配置功能
- */
-@Target({ ElementType.TYPE })
+/** 简化的RabbitMQ消费者注解 只保留基础的消费者配置功能 */
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RabbitConsumer {
 
-  /**
-   * 队列名称（必填）
-   */
+  /** 队列名称（必填） */
   String queueName();
 
   /**

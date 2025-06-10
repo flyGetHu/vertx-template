@@ -7,9 +7,7 @@ import com.vertx.template.service.impl.UserServiceImpl;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
 
-/**
- * 用户服务接口，定义用户相关的业务逻辑操作
- */
+/** 用户服务接口，定义用户相关的业务逻辑操作 */
 @ImplementedBy(UserServiceImpl.class)
 public interface UserService {
 
@@ -47,7 +45,7 @@ public interface UserService {
   /**
    * 更新用户信息
    *
-   * @param id   用户ID
+   * @param id 用户ID
    * @param user 更新的用户信息
    * @return 更新后的用户对象
    */
@@ -80,7 +78,7 @@ public interface UserService {
   /**
    * 更新用户Profile信息
    *
-   * @param userId     用户ID
+   * @param userId 用户ID
    * @param updateData 更新数据
    * @return 包含操作结果的JsonObject
    */

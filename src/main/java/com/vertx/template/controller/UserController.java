@@ -7,17 +7,14 @@ import com.vertx.template.middleware.auth.annotation.CurrentUser;
 import com.vertx.template.middleware.auth.annotation.RequireAuth;
 import com.vertx.template.model.context.UserContext;
 import com.vertx.template.model.entity.User;
-import com.vertx.template.service.UserService;
 import com.vertx.template.router.annotation.*;
+import com.vertx.template.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 用户控制器
- * 负责处理用户相关的HTTP请求，调用UserService进行业务处理
- */
+/** 用户控制器 负责处理用户相关的HTTP请求，调用UserService进行业务处理 */
 @RestController
 @RequestMapping("/api/users")
 @Singleton
@@ -28,8 +25,7 @@ public class UserController {
   @Inject
   public UserController(UserService userService) {
     this.userService = userService;
-    logger.info(
-        "UserController initialized with service: {}", userService.getClass().getName());
+    logger.info("UserController initialized with service: {}", userService.getClass().getName());
   }
 
   /**
@@ -90,7 +86,7 @@ public class UserController {
   /**
    * 更新用户
    *
-   * @param id   用户ID
+   * @param id 用户ID
    * @param user 更新的用户信息
    * @return 更新后的用户对象
    */
@@ -141,7 +137,7 @@ public class UserController {
    * 更新当前用户信息 - 需要JWT认证
    *
    * @param userContext 当前用户上下文
-   * @param updateData  更新数据
+   * @param updateData 更新数据
    * @return 包含操作结果的JsonObject
    */
   @PostMapping("/profile")

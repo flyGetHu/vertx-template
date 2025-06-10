@@ -7,25 +7,20 @@ import com.vertx.template.model.entity.User;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.service.impl.UserServiceImpl;
 import io.vertx.core.json.JsonObject;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-
-/**
- * UserService单元测试
- * 测试分层架构修复后的Service层功能
- */
+/** UserService单元测试 测试分层架构修复后的Service层功能 */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-  @Mock
-  private UserRepository userRepository;
+  @Mock private UserRepository userRepository;
 
   private UserService userService;
 
@@ -110,9 +105,12 @@ class UserServiceTest {
     when(userRepository.findById(userId)).thenReturn(null);
 
     // 执行测试并验证异常
-    RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-      userService.getUserById(userId);
-    });
+    RuntimeException exception =
+        assertThrows(
+            RuntimeException.class,
+            () -> {
+              userService.getUserById(userId);
+            });
 
     assertEquals("用户不存在: " + userId, exception.getMessage());
     verify(userRepository).findById(userId);
@@ -154,9 +152,12 @@ class UserServiceTest {
     when(userRepository.findByUsername("existinguser")).thenReturn(existingUser);
 
     // 执行测试并验证异常
-    RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-      userService.createUser(inputUser);
-    });
+    RuntimeException exception =
+        assertThrows(
+            RuntimeException.class,
+            () -> {
+              userService.createUser(inputUser);
+            });
 
     assertEquals("用户名已存在: existinguser", exception.getMessage());
     verify(userRepository).findByUsername("existinguser");
@@ -212,9 +213,7 @@ class UserServiceTest {
     assertTrue(result.containsKey("timestamp"));
   }
 
-  /**
-   * 创建测试用户对象
-   */
+  /** 创建测试用户对象 */
   private User createTestUser(Long id, String username, String email, boolean active) {
     User user = new User();
     user.setId(id);

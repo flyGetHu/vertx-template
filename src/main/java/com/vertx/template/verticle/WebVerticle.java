@@ -10,10 +10,7 @@ import io.vertx.ext.web.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Web服务器Verticle
- * 负责HTTP服务器启动、路由注册和Web相关配置
- */
+/** Web服务器Verticle 负责HTTP服务器启动、路由注册和Web相关配置 */
 public class WebVerticle extends AbstractVerticle {
   private static final Logger logger = LoggerFactory.getLogger(WebVerticle.class);
 
@@ -40,15 +37,18 @@ public class WebVerticle extends AbstractVerticle {
   @Override
   public void stop(Promise<Void> stopPromise) {
     if (httpServer != null) {
-      httpServer.close().onComplete(result -> {
-        if (result.succeeded()) {
-          logger.info("HTTP服务器已停止");
-          stopPromise.complete();
-        } else {
-          logger.error("HTTP服务器停止失败：", result.cause());
-          stopPromise.fail(result.cause());
-        }
-      });
+      httpServer
+          .close()
+          .onComplete(
+              result -> {
+                if (result.succeeded()) {
+                  logger.info("HTTP服务器已停止");
+                  stopPromise.complete();
+                } else {
+                  logger.error("HTTP服务器停止失败：", result.cause());
+                  stopPromise.fail(result.cause());
+                }
+              });
     } else {
       stopPromise.complete();
     }

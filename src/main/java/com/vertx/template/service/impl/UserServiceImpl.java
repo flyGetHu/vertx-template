@@ -6,18 +6,14 @@ import com.vertx.template.model.dto.UserDto;
 import com.vertx.template.model.entity.User;
 import com.vertx.template.repository.UserRepository;
 import com.vertx.template.service.UserService;
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * 用户服务实现类，处理用户相关的业务逻辑
- */
+/** 用户服务实现类，处理用户相关的业务逻辑 */
 @Singleton
 public class UserServiceImpl implements UserService {
 
@@ -27,8 +23,8 @@ public class UserServiceImpl implements UserService {
   @Inject
   public UserServiceImpl(UserRepository userRepository) {
     this.userRepository = userRepository;
-    logger.info("UserServiceImpl initialized with repository: {}",
-        userRepository.getClass().getName());
+    logger.info(
+        "UserServiceImpl initialized with repository: {}", userRepository.getClass().getName());
   }
 
   // 异步方法实现（向后兼容）

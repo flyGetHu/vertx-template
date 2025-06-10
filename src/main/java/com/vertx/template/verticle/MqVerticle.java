@@ -12,14 +12,9 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 消息队列Verticle
- * 负责MQ连接初始化、消息发送接收基础设施和相关配置
+ * 消息队列Verticle 负责MQ连接初始化、消息发送接收基础设施和相关配置
  *
- * 主要职责：
- * 1. 验证和加载MQ配置
- * 2. 初始化RabbitMQ连接管理器
- * 3. 自动扫描并启动消费者
- * 4. 管理MQ服务的生命周期
+ * <p>主要职责： 1. 验证和加载MQ配置 2. 初始化RabbitMQ连接管理器 3. 自动扫描并启动消费者 4. 管理MQ服务的生命周期
  */
 @Slf4j
 public class MqVerticle extends AbstractVerticle {
@@ -47,8 +42,11 @@ public class MqVerticle extends AbstractVerticle {
 
       // 2. 验证MQ配置
       final RabbitMqConfig rabbitMqConfig = validateMqConfig(config);
-      log.info("MQ配置验证通过: host={}, port={}, user={}",
-          rabbitMqConfig.getHost(), rabbitMqConfig.getPort(), rabbitMqConfig.getUser());
+      log.info(
+          "MQ配置验证通过: host={}, port={}, user={}",
+          rabbitMqConfig.getHost(),
+          rabbitMqConfig.getPort(),
+          rabbitMqConfig.getUser());
 
       // 3. 初始化依赖注入容器
       initializeDependencyInjection(config);
@@ -101,9 +99,7 @@ public class MqVerticle extends AbstractVerticle {
     }
   }
 
-  /**
-   * 检查MQ是否启用
-   */
+  /** 检查MQ是否启用 */
   private boolean isMqEnabled(final JsonObject config) {
     // 检查全局MQ开关
     final JsonObject mqConfig = config.getJsonObject("mq");
@@ -115,9 +111,7 @@ public class MqVerticle extends AbstractVerticle {
     return false;
   }
 
-  /**
-   * 验证MQ配置
-   */
+  /** 验证MQ配置 */
   private RabbitMqConfig validateMqConfig(final JsonObject config) {
     // 优先从mq.rabbitmq路径读取配置
     JsonObject mqConfig = config.getJsonObject("mq");
@@ -141,9 +135,7 @@ public class MqVerticle extends AbstractVerticle {
     return rabbitMqConfig;
   }
 
-  /**
-   * 初始化依赖注入容器
-   */
+  /** 初始化依赖注入容器 */
   private void initializeDependencyInjection(final JsonObject config) {
     log.info("初始化MQ依赖注入容器...");
 
@@ -158,9 +150,7 @@ public class MqVerticle extends AbstractVerticle {
     }
   }
 
-  /**
-   * 初始化连接管理器
-   */
+  /** 初始化连接管理器 */
   private void initializeConnectionManager() {
     log.info("初始化RabbitMQ连接管理器...");
 
@@ -172,9 +162,7 @@ public class MqVerticle extends AbstractVerticle {
     }
   }
 
-  /**
-   * 启动消费者
-   */
+  /** 启动消费者 */
   private void startConsumers() {
     log.info("开始扫描并启动消费者...");
 
@@ -189,7 +177,8 @@ public class MqVerticle extends AbstractVerticle {
 
       // 如果没有找到任何消费者，给出提示
       if (registeredCount == 0) {
-        log.info("未找到任何消费者，如需使用消费者功能，请在 {} 包下创建实现 MessageConsumer 接口并标注 @RabbitConsumer 的类",
+        log.info(
+            "未找到任何消费者，如需使用消费者功能，请在 {} 包下创建实现 MessageConsumer 接口并标注 @RabbitConsumer 的类",
             CONSUMER_SCAN_PACKAGE);
       }
 
@@ -198,16 +187,12 @@ public class MqVerticle extends AbstractVerticle {
     }
   }
 
-  /**
-   * 获取MQ管理器（供其他组件使用）
-   */
+  /** 获取MQ管理器（供其他组件使用） */
   public MQManager getMqManager() {
     return mqManager;
   }
 
-  /**
-   * 检查MQ是否已启用并可用
-   */
+  /** 检查MQ是否已启用并可用 */
   public boolean isMqReady() {
     return mqEnabled && mqManager != null && connectionManager != null;
   }

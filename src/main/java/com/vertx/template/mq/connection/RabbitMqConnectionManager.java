@@ -22,7 +22,7 @@ public class RabbitMqConnectionManager {
   /**
    * 构造器
    *
-   * @param vertx  Vert.x实例
+   * @param vertx Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject

@@ -8,17 +8,19 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 示例消息消费者
- * 展示如何使用@RabbitConsumer注解和MessageConsumer接口
+ * 示例消息消费者 展示如何使用@RabbitConsumer注解和MessageConsumer接口
  *
- * 注意：此消费者需要预先创建以下RabbitMQ基础设施：
- * 1. 队列：example.queue
- * 2. 交换机：user.exchange
- * 3. 绑定关系：queue绑定到exchange，routing key为user.*
+ * <p>注意：此消费者需要预先创建以下RabbitMQ基础设施： 1. 队列：example.queue 2. 交换机：user.exchange 3.
+ * 绑定关系：queue绑定到exchange，routing key为user.*
  */
 @Slf4j
 @Singleton
-@RabbitConsumer(queueName = "example.queue", enabled = true, autoAck = false, maxRetries = 3, retryDelayMs = 1000)
+@RabbitConsumer(
+    queueName = "example.queue",
+    enabled = true,
+    autoAck = false,
+    maxRetries = 3,
+    retryDelayMs = 1000)
 public class ExampleMessageConsumer implements MessageConsumer {
 
   @Override
@@ -55,9 +57,7 @@ public class ExampleMessageConsumer implements MessageConsumer {
     }
   }
 
-  /**
-   * 处理消息的业务逻辑
-   */
+  /** 处理消息的业务逻辑 */
   private void processMessage(final String messageBody) {
     // 模拟不同类型的消息处理
     if (messageBody.contains("error")) {
@@ -104,9 +104,7 @@ public class ExampleMessageConsumer implements MessageConsumer {
     }
   }
 
-  /**
-   * 处理用户登录事件
-   */
+  /** 处理用户登录事件 */
   private void handleUserLogin(final String userId, final JsonObject event) {
     final long timestamp = event.getLong("timestamp", System.currentTimeMillis());
     log.info("用户 {} 于 {} 登录系统", userId, new java.util.Date(timestamp));
@@ -118,9 +116,7 @@ public class ExampleMessageConsumer implements MessageConsumer {
     // 4. 统计登录次数等
   }
 
-  /**
-   * 处理用户登出事件
-   */
+  /** 处理用户登出事件 */
   private void handleUserLogout(final String userId, final JsonObject event) {
     final long timestamp = event.getLong("timestamp", System.currentTimeMillis());
     log.info("用户 {} 于 {} 登出系统", userId, new java.util.Date(timestamp));
@@ -131,9 +127,7 @@ public class ExampleMessageConsumer implements MessageConsumer {
     // 3. 计算在线时长等
   }
 
-  /**
-   * 处理用户注册事件
-   */
+  /** 处理用户注册事件 */
   private void handleUserRegister(final String userId, final JsonObject event) {
     final String username = event.getString("username", "未知用户");
     log.info("新用户注册 - 用户ID: {}, 用户名: {}", userId, username);

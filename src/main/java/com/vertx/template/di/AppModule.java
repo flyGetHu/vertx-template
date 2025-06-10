@@ -10,24 +10,21 @@ import com.vertx.template.middleware.auth.AuthenticationManager;
 import com.vertx.template.middleware.core.impl.CorsMiddleware;
 import com.vertx.template.middleware.ratelimit.core.RateLimitManager;
 import com.vertx.template.middleware.ratelimit.interceptor.RateLimitInterceptor;
-import com.vertx.template.repository.UserRepository;
-import com.vertx.template.repository.impl.UserRepositoryImpl;
-import com.vertx.template.service.UserService;
-import com.vertx.template.service.impl.UserServiceImpl;
-import com.vertx.template.router.cache.ReflectionCache;
 import com.vertx.template.mq.MQManager;
 import com.vertx.template.mq.config.RabbitMqConfig;
 import com.vertx.template.mq.connection.ChannelPool;
 import com.vertx.template.mq.connection.RabbitMqConnectionManager;
 import com.vertx.template.mq.consumer.BasicConsumerMonitor;
+import com.vertx.template.repository.UserRepository;
+import com.vertx.template.repository.impl.UserRepositoryImpl;
+import com.vertx.template.router.cache.ReflectionCache;
+import com.vertx.template.service.UserService;
+import com.vertx.template.service.impl.UserServiceImpl;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
-/**
- * 依赖注入模块，配置应用程序的依赖关系
- * 遵循分层架构：Controller -> Service -> Repository
- */
+/** 依赖注入模块，配置应用程序的依赖关系 遵循分层架构：Controller -> Service -> Repository */
 public class AppModule extends AbstractModule {
 
   private final Vertx vertx;
@@ -136,14 +133,15 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public RabbitMqConnectionManager provideRabbitMqConnectionManager(final Vertx vertx,
-      final RabbitMqConfig rabbitMqConfig) {
+  public RabbitMqConnectionManager provideRabbitMqConnectionManager(
+      final Vertx vertx, final RabbitMqConfig rabbitMqConfig) {
     return new RabbitMqConnectionManager(vertx, rabbitMqConfig);
   }
 
   @Provides
   @Singleton
-  public ChannelPool provideChannelPool(final Vertx vertx, final RabbitMqConnectionManager connectionManager) {
+  public ChannelPool provideChannelPool(
+      final Vertx vertx, final RabbitMqConnectionManager connectionManager) {
     return new ChannelPool(vertx, connectionManager);
   }
 

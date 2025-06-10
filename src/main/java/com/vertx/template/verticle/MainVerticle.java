@@ -11,10 +11,7 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 主Verticle
- * 负责应用初始化、配置加载和其他Verticle的部署协调
- */
+/** 主Verticle 负责应用初始化、配置加载和其他Verticle的部署协调 */
 public class MainVerticle extends AbstractVerticle {
   private static final Logger logger = LoggerFactory.getLogger(MainVerticle.class);
 

@@ -22,10 +22,7 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
 
-/**
- * 简化的MQ管理器
- * 统一管理消息的生产和消费功能
- */
+/** 简化的MQ管理器 统一管理消息的生产和消费功能 */
 @Slf4j
 @Singleton
 public class MQManager {
@@ -63,9 +60,7 @@ public class MQManager {
   // 消费者管理功能
   // ========================================
 
-  /**
-   * 自动扫描并启动所有消费者
-   */
+  /** 自动扫描并启动所有消费者 */
   public void scanAndStartConsumers(final String basePackage) {
     log.info("开始扫描并启动消费者，基础包: {}", basePackage);
 
@@ -91,9 +86,7 @@ public class MQManager {
     }
   }
 
-  /**
-   * 注册并启动单个消费者
-   */
+  /** 注册并启动单个消费者 */
   public void registerAndStartConsumer(final Class<?> consumerClass) {
     try {
       if (!MessageConsumer.class.isAssignableFrom(consumerClass)) {
@@ -135,9 +128,7 @@ public class MQManager {
     }
   }
 
-  /**
-   * 启动指定消费者
-   */
+  /** 启动指定消费者 */
   public void startConsumer(final String consumerName) {
     final MessageConsumer consumer = registeredConsumers.get(consumerName);
     final RabbitConsumer annotation = consumerAnnotations.get(consumerName);
@@ -162,11 +153,11 @@ public class MQManager {
       consumer.onStart(); // 调用启动回调
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options = new QueueOptions()
-          .setAutoAck(annotation.autoAck())
-          .setMaxInternalQueueSize(1000);
+      final QueueOptions options =
+          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer =
+          Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
@@ -183,9 +174,7 @@ public class MQManager {
     }
   }
 
-  /**
-   * 停止指定消费者
-   */
+  /** 停止指定消费者 */
   public void stopConsumer(final String consumerName) {
     log.info("正在停止消费者: {}", consumerName);
 
@@ -213,9 +202,7 @@ public class MQManager {
     }
   }
 
-  /**
-   * 停止所有消费者
-   */
+  /** 停止所有消费者 */
   public void stopAllConsumers() {
     log.info("正在停止所有消费者...");
 
@@ -241,17 +228,14 @@ public class MQManager {
   // 消息生产功能
   // ========================================
 
-  /**
-   * 发送简单消息到队列
-   */
+  /** 发送简单消息到队列 */
   public void sendToQueue(final String queueName, final String message) {
     sendToQueue(queueName, message, null);
   }
 
-  /**
-   * 发送消息到队列（带属性）
-   */
-  public void sendToQueue(final String queueName, final String message, final JsonObject properties) {
+  /** 发送消息到队列（带属性） */
+  public void sendToQueue(
+      final String queueName, final String message, final JsonObject properties) {
     final RabbitMQClient client = channelPool.borrowClient();
     try {
       // 直接发送消息，不创建队列
@@ -265,17 +249,17 @@ public class MQManager {
     }
   }
 
-  /**
-   * 发送消息到交换机
-   */
-  public void sendToExchange(final String exchangeName, final String routingKey, final String message) {
+  /** 发送消息到交换机 */
+  public void sendToExchange(
+      final String exchangeName, final String routingKey, final String message) {
     sendToExchange(exchangeName, routingKey, message, null);
   }
 
-  /**
-   * 发送消息到交换机（带属性）
-   */
-  public void sendToExchange(final String exchangeName, final String routingKey, final String message,
+  /** 发送消息到交换机（带属性） */
+  public void sendToExchange(
+      final String exchangeName,
+      final String routingKey,
+      final String message,
       final JsonObject properties) {
     final RabbitMQClient client = channelPool.borrowClient();
     try {
@@ -283,25 +267,26 @@ public class MQManager {
       Future.await(client.basicPublish(exchangeName, routingKey, Buffer.buffer(message)));
       log.debug("消息发送成功 - 交换机: {}, 路由键: {}, 消息: {}", exchangeName, routingKey, message);
     } catch (Exception cause) {
-      log.error("发送消息到交换机失败 - 交换机: {}, 路由键: {}, 消息: {} - 请确保交换机已存在",
-          exchangeName, routingKey, message, cause);
+      log.error(
+          "发送消息到交换机失败 - 交换机: {}, 路由键: {}, 消息: {} - 请确保交换机已存在",
+          exchangeName,
+          routingKey,
+          message,
+          cause);
       throw new RuntimeException("发送消息到交换机失败，请确保交换机 [" + exchangeName + "] 已存在", cause);
     } finally {
       channelPool.returnClient(client);
     }
   }
 
-  /**
-   * 发送 JSON 消息到队列
-   */
+  /** 发送 JSON 消息到队列 */
   public void sendJsonToQueue(final String queueName, final JsonObject jsonData) {
     sendToQueue(queueName, jsonData.encode(), createJsonProperties());
   }
 
-  /**
-   * 发送 JSON 消息到交换机
-   */
-  public void sendJsonToExchange(final String exchangeName, final String routingKey, final JsonObject jsonData) {
+  /** 发送 JSON 消息到交换机 */
+  public void sendJsonToExchange(
+      final String exchangeName, final String routingKey, final JsonObject jsonData) {
     sendToExchange(exchangeName, routingKey, jsonData.encode(), createJsonProperties());
   }
 
@@ -309,10 +294,10 @@ public class MQManager {
   // 内部辅助方法
   // ========================================
 
-  /**
-   * 处理接收到的消息
-   */
-  private void handleMessage(final MessageConsumer consumer, final RabbitConsumer annotation,
+  /** 处理接收到的消息 */
+  private void handleMessage(
+      final MessageConsumer consumer,
+      final RabbitConsumer annotation,
       final RabbitMQMessage message) {
     final String consumerName = consumer.getConsumerName();
     final long startTime = System.currentTimeMillis();
@@ -348,11 +333,12 @@ public class MQManager {
     }
   }
 
-  /**
-   * 简单的重试处理
-   */
-  private void handleRetry(final MessageConsumer consumer, final RabbitConsumer annotation,
-      final RabbitMQMessage message, final String errorReason) {
+  /** 简单的重试处理 */
+  private void handleRetry(
+      final MessageConsumer consumer,
+      final RabbitConsumer annotation,
+      final RabbitMQMessage message,
+      final String errorReason) {
     final String consumerName = consumer.getConsumerName();
     final int maxRetries = annotation.maxRetries();
 
@@ -380,23 +366,23 @@ public class MQManager {
     final int nextRetryCount = currentRetries + 1;
     final long retryDelay = annotation.retryDelayMs() * nextRetryCount; // 线性延迟
 
-    log.info("消费者 {} 将在 {}ms 后进行第 {} 次重试，原因: {}",
-        consumerName, retryDelay, nextRetryCount, errorReason);
+    log.info(
+        "消费者 {} 将在 {}ms 后进行第 {} 次重试，原因: {}", consumerName, retryDelay, nextRetryCount, errorReason);
 
-    vertx.setTimer(retryDelay, timerId -> {
-      try {
-        // 重新处理消息
-        monitor.recordRetry(consumerName);
-        handleMessage(consumer, annotation, message);
-      } catch (Exception retryError) {
-        log.error("重试处理消息失败 - 消费者: {}", consumerName, retryError);
-      }
-    });
+    vertx.setTimer(
+        retryDelay,
+        timerId -> {
+          try {
+            // 重新处理消息
+            monitor.recordRetry(consumerName);
+            handleMessage(consumer, annotation, message);
+          } catch (Exception retryError) {
+            log.error("重试处理消息失败 - 消费者: {}", consumerName, retryError);
+          }
+        });
   }
 
-  /**
-   * 清理消费者资源
-   */
+  /** 清理消费者资源 */
   private void cleanupConsumer(final String consumerName) {
     try {
       activeConsumers.remove(consumerName);
@@ -409,9 +395,7 @@ public class MQManager {
     }
   }
 
-  /**
-   * 创建 JSON 消息属性
-   */
+  /** 创建 JSON 消息属性 */
   private JsonObject createJsonProperties() {
     return new JsonObject().put("content-type", "application/json");
   }

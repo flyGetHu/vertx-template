@@ -6,10 +6,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * SimpleMQManager 使用示例
- * 展示如何使用统一的MQ管理器进行消息的生产和消费
- */
+/** SimpleMQManager 使用示例 展示如何使用统一的MQ管理器进行消息的生产和消费 */
 @Slf4j
 @Singleton
 public class SimpleMQExample {
@@ -21,10 +18,7 @@ public class SimpleMQExample {
     this.mqManager = mqManager;
   }
 
-  /**
-   * 启动示例
-   * 在应用启动时调用此方法
-   */
+  /** 启动示例 在应用启动时调用此方法 */
   public void start() {
     log.info("=== SimpleMQManager 使用示例 ===");
 
@@ -38,9 +32,7 @@ public class SimpleMQExample {
     showMonitorInfo();
   }
 
-  /**
-   * 启动消费者
-   */
+  /** 启动消费者 */
   private void startConsumers() {
     log.info("1. 启动消费者系统...");
 
@@ -50,9 +42,7 @@ public class SimpleMQExample {
     log.info("消费者启动完成，活跃消费者数量: {}", mqManager.getActiveConsumerCount());
   }
 
-  /**
-   * 发送测试消息
-   */
+  /** 发送测试消息 */
   private void sendTestMessages() {
     log.info("2. 发送测试消息...");
 
@@ -61,10 +51,11 @@ public class SimpleMQExample {
       mqManager.sendToQueue("example.queue", "Hello SimpleMQManager!");
 
       // 发送JSON消息
-      final JsonObject userEvent = new JsonObject()
-          .put("userId", "12345")
-          .put("action", "login")
-          .put("timestamp", System.currentTimeMillis());
+      final JsonObject userEvent =
+          new JsonObject()
+              .put("userId", "12345")
+              .put("action", "login")
+              .put("timestamp", System.currentTimeMillis());
 
       mqManager.sendJsonToQueue("example.queue", userEvent);
 
@@ -81,9 +72,7 @@ public class SimpleMQExample {
     }
   }
 
-  /**
-   * 展示监控信息
-   */
+  /** 展示监控信息 */
   private void showMonitorInfo() {
     log.info("3. 当前系统状态...");
 
@@ -102,9 +91,7 @@ public class SimpleMQExample {
     log.info("监控统计: {}", allStats.encodePrettily());
   }
 
-  /**
-   * 演示运行时管理功能
-   */
+  /** 演示运行时管理功能 */
   public void demonstrateRuntimeManagement() {
     log.info("=== 运行时管理演示 ===");
 
@@ -123,9 +110,7 @@ public class SimpleMQExample {
     }
   }
 
-  /**
-   * 清理资源
-   */
+  /** 清理资源 */
   public void cleanup() {
     log.info("=== 清理资源 ===");
 
