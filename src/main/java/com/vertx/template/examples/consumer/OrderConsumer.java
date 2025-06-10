@@ -7,12 +7,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.RabbitMQMessage;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * 订单消息消费者示例
- * 展示如何使用注解配置消费者
- */
+/** 订单消息消费者示例 展示如何使用注解配置消费者 */
 @Slf4j
-@RabbitConsumer(queue = "order.queue", exchange = "order.exchange", exchangeType = ExchangeType.DIRECT, routingKey = "order.created", durable = true, autoAck = false, qos = 10, enabled = true)
+@RabbitConsumer(
+    queue = "order.queue",
+    exchange = "order.exchange",
+    exchangeType = ExchangeType.DIRECT,
+    routingKey = "order.created",
+    durable = true,
+    autoAck = false,
+    qos = 10,
+    enabled = true)
 public class OrderConsumer implements MessageConsumer {
 
   @Override
@@ -73,9 +78,9 @@ public class OrderConsumer implements MessageConsumer {
   /**
    * 处理订单业务逻辑
    *
-   * @param orderId    订单ID
+   * @param orderId 订单ID
    * @param customerId 客户ID
-   * @param amount     金额
+   * @param amount 金额
    */
   private void processOrder(String orderId, String customerId, Double amount) {
     // 模拟订单处理逻辑
@@ -92,7 +97,7 @@ public class OrderConsumer implements MessageConsumer {
   /**
    * 记录失败的订单信息
    *
-   * @param orderId      订单ID
+   * @param orderId 订单ID
    * @param errorMessage 错误信息
    */
   private void recordFailedOrder(String orderId, String errorMessage) {

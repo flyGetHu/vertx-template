@@ -3,20 +3,16 @@ package com.vertx.template.controller;
 import com.vertx.template.mq.consumer.ConsumerMonitor;
 import com.vertx.template.mq.consumer.ConsumerRegistry;
 import com.vertx.template.mq.consumer.lifecycle.ConsumerLifecycleManager;
-import com.vertx.template.router.annotation.RestController;
 import com.vertx.template.router.annotation.GetMapping;
-import com.vertx.template.router.annotation.PostMapping;
 import com.vertx.template.router.annotation.PathParam;
+import com.vertx.template.router.annotation.PostMapping;
+import com.vertx.template.router.annotation.RestController;
 import io.vertx.core.json.JsonObject;
-import lombok.extern.slf4j.Slf4j;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 消费者管理控制器
- * 提供消费者状态查询、管理和监控相关的API接口
- */
+/** 消费者管理控制器 提供消费者状态查询、管理和监控相关的API接口 */
 @Slf4j
 @RestController("/api/consumer")
 @Singleton
@@ -30,11 +26,12 @@ public class ConsumerManagementController {
    * 构造器
    *
    * @param consumerRegistry 消费者注册器
-   * @param consumerMonitor  消费者监控器
+   * @param consumerMonitor 消费者监控器
    * @param lifecycleManager 生命周期管理器
    */
   @Inject
-  public ConsumerManagementController(ConsumerRegistry consumerRegistry,
+  public ConsumerManagementController(
+      ConsumerRegistry consumerRegistry,
       ConsumerMonitor consumerMonitor,
       ConsumerLifecycleManager lifecycleManager) {
     this.consumerRegistry = consumerRegistry;
@@ -220,9 +217,7 @@ public class ConsumerManagementController {
 
     consumerMonitor.resetAllMetrics();
 
-    return new JsonObject()
-        .put("success", true)
-        .put("message", "所有监控指标重置成功");
+    return new JsonObject().put("success", true).put("message", "所有监控指标重置成功");
   }
 
   /**
@@ -268,15 +263,11 @@ public class ConsumerManagementController {
       // 使用Future.await在虚拟线程中同步等待
       Future.await(lifecycleManager.restart("com.vertx.template.examples.consumer"));
 
-      return new JsonObject()
-          .put("success", true)
-          .put("message", "消费者系统重启成功");
+      return new JsonObject().put("success", true).put("message", "消费者系统重启成功");
 
     } catch (Exception e) {
       log.error("重启消费者系统失败", e);
-      return new JsonObject()
-          .put("success", false)
-          .put("message", "消费者系统重启失败: " + e.getMessage());
+      return new JsonObject().put("success", false).put("message", "消费者系统重启失败: " + e.getMessage());
     }
   }
 
@@ -293,15 +284,11 @@ public class ConsumerManagementController {
       // 使用Future.await在虚拟线程中同步等待
       Future.await(lifecycleManager.stop());
 
-      return new JsonObject()
-          .put("success", true)
-          .put("message", "消费者系统停止成功");
+      return new JsonObject().put("success", true).put("message", "消费者系统停止成功");
 
     } catch (Exception e) {
       log.error("停止消费者系统失败", e);
-      return new JsonObject()
-          .put("success", false)
-          .put("message", "消费者系统停止失败: " + e.getMessage());
+      return new JsonObject().put("success", false).put("message", "消费者系统停止失败: " + e.getMessage());
     }
   }
 }

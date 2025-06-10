@@ -7,21 +7,14 @@ import com.vertx.template.mq.consumer.MessageConsumer;
 import com.vertx.template.mq.consumer.annotation.RabbitConsumer;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.rabbitmq.QueueOptions;
-import io.vertx.rabbitmq.RabbitMQClient;
-import io.vertx.rabbitmq.RabbitMQConsumer;
 import io.vertx.rabbitmq.RabbitMQMessage;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 增强版消费者管理器
- * 在原有ConsumerManager基础上集成重试机制和死信队列处理
- */
+/** 增强版消费者管理器 在原有ConsumerManager基础上集成重试机制和死信队列处理 */
 @Slf4j
 @Singleton
 public class EnhancedConsumerManager extends ConsumerManager {
@@ -32,8 +25,8 @@ public class EnhancedConsumerManager extends ConsumerManager {
   /**
    * 构造器
    *
-   * @param vertx        Vert.x实例
-   * @param config       RabbitMQ配置
+   * @param vertx Vert.x实例
+   * @param config RabbitMQ配置
    * @param retryHandler 重试处理器
    */
   @Inject
@@ -45,7 +38,7 @@ public class EnhancedConsumerManager extends ConsumerManager {
   /**
    * 配置消费者的重试策略
    *
-   * @param consumerName  消费者名称
+   * @param consumerName 消费者名称
    * @param retryStrategy 重试策略
    */
   public void configureRetry(String consumerName, RetryHandler.RetryStrategy retryStrategy) {
@@ -56,7 +49,7 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 配置消费者的重试和死信队列
    *
    * @param consumerName 消费者名称
-   * @param retryConfig  重试配置
+   * @param retryConfig 重试配置
    */
   public void configureRetry(String consumerName, RetryConfig retryConfig) {
     retryConfigs.put(consumerName, retryConfig);
@@ -78,7 +71,7 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 启动带重试机制的消费者
    *
    * @param messageConsumer 消息消费者实例
-   * @param annotation      消费者注解
+   * @param annotation 消费者注解
    * @return 启动结果的Future
    */
   @Override
@@ -100,13 +93,12 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 启动带重试机制的消费者
    *
    * @param messageConsumer 消息消费者实例
-   * @param annotation      消费者注解
-   * @param retryConfig     重试配置
+   * @param annotation 消费者注解
+   * @param retryConfig 重试配置
    * @return 启动结果的Future
    */
-  private Future<Void> startConsumerWithRetry(MessageConsumer messageConsumer,
-      RabbitConsumer annotation,
-      RetryConfig retryConfig) {
+  private Future<Void> startConsumerWithRetry(
+      MessageConsumer messageConsumer, RabbitConsumer annotation, RetryConfig retryConfig) {
     if (!annotation.enabled()) {
       log.info("消费者 {} 已禁用，跳过启动", messageConsumer.getConsumerName());
       return Future.succeededFuture();
@@ -120,13 +112,12 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 启动带重试机制的消费者
    *
    * @param messageConsumer 消息消费者实例
-   * @param consumerConfig  消费者配置
-   * @param retryConfig     重试配置
+   * @param consumerConfig 消费者配置
+   * @param retryConfig 重试配置
    * @return 启动结果的Future
    */
-  private Future<Void> startConsumerWithRetry(MessageConsumer messageConsumer,
-      ConsumerConfig consumerConfig,
-      RetryConfig retryConfig) {
+  private Future<Void> startConsumerWithRetry(
+      MessageConsumer messageConsumer, ConsumerConfig consumerConfig, RetryConfig retryConfig) {
     String consumerName = messageConsumer.getConsumerName();
     log.info("正在启动带重试机制的消费者: {}", consumerName);
 
@@ -147,13 +138,12 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 内部启动消费者逻辑
    *
    * @param messageConsumer 消息消费者
-   * @param consumerConfig  消费者配置
-   * @param retryConfig     重试配置
+   * @param consumerConfig 消费者配置
+   * @param retryConfig 重试配置
    * @return 启动结果的Future
    */
-  private Future<Void> startConsumerInternal(MessageConsumer messageConsumer,
-      ConsumerConfig consumerConfig,
-      RetryConfig retryConfig) {
+  private Future<Void> startConsumerInternal(
+      MessageConsumer messageConsumer, ConsumerConfig consumerConfig, RetryConfig retryConfig) {
     String consumerName = messageConsumer.getConsumerName();
 
     // 这里需要访问父类的私有字段，我们通过反射或者重新实现
@@ -165,63 +155,70 @@ public class EnhancedConsumerManager extends ConsumerManager {
    * 处理带重试机制的消息
    *
    * @param messageConsumer 消息处理器
-   * @param message         接收到的消息
-   * @param retryConfig     重试配置
+   * @param message 接收到的消息
+   * @param retryConfig 重试配置
    */
-  private void handleMessageWithRetry(MessageConsumer messageConsumer,
-      RabbitMQMessage message,
-      RetryConfig retryConfig) {
+  private void handleMessageWithRetry(
+      MessageConsumer messageConsumer, RabbitMQMessage message, RetryConfig retryConfig) {
     String consumerName = messageConsumer.getConsumerName();
 
-    messageConsumer.handleMessage(message)
-        .onSuccess(success -> {
-          if (success) {
-            log.debug("消息处理成功 - 消费者: {}", consumerName);
-            // 确认消息
-            acknowledgeMessage(message);
-          } else {
-            log.warn("消息处理返回失败 - 消费者: {}", consumerName);
-            handleMessageFailure(messageConsumer, message,
-                new RuntimeException("消息处理返回失败"), retryConfig);
-          }
-        })
-        .onFailure(cause -> {
-          log.error("消息处理异常 - 消费者: {}", consumerName, cause);
-          handleMessageFailure(messageConsumer, message, cause, retryConfig);
-        });
+    messageConsumer
+        .handleMessage(message)
+        .onSuccess(
+            success -> {
+              if (success) {
+                log.debug("消息处理成功 - 消费者: {}", consumerName);
+                // 确认消息
+                acknowledgeMessage(message);
+              } else {
+                log.warn("消息处理返回失败 - 消费者: {}", consumerName);
+                handleMessageFailure(
+                    messageConsumer, message, new RuntimeException("消息处理返回失败"), retryConfig);
+              }
+            })
+        .onFailure(
+            cause -> {
+              log.error("消息处理异常 - 消费者: {}", consumerName, cause);
+              handleMessageFailure(messageConsumer, message, cause, retryConfig);
+            });
   }
 
   /**
    * 处理消息失败
    *
    * @param messageConsumer 消息处理器
-   * @param message         消息
-   * @param cause           失败原因
-   * @param retryConfig     重试配置
+   * @param message 消息
+   * @param cause 失败原因
+   * @param retryConfig 重试配置
    */
-  private void handleMessageFailure(MessageConsumer messageConsumer,
+  private void handleMessageFailure(
+      MessageConsumer messageConsumer,
       RabbitMQMessage message,
       Throwable cause,
       RetryConfig retryConfig) {
     String consumerName = messageConsumer.getConsumerName();
-    String queueName = retryConfig.getTargetQueue() != null ? retryConfig.getTargetQueue() : consumerName;
+    String queueName =
+        retryConfig.getTargetQueue() != null ? retryConfig.getTargetQueue() : consumerName;
 
     // 使用重试处理器处理失败
-    retryHandler.handleRetry(consumerName, message, cause, queueName)
-        .onSuccess(retryResult -> {
-          if (retryResult) {
-            log.debug("消息重试安排成功 - 消费者: {}", consumerName);
-          } else {
-            log.warn("消息已发送到死信队列 - 消费者: {}", consumerName);
-          }
-          // 拒绝原消息
-          rejectMessage(message);
-        })
-        .onFailure(retryError -> {
-          log.error("重试处理失败 - 消费者: {}", consumerName, retryError);
-          // 拒绝原消息
-          rejectMessage(message);
-        });
+    retryHandler
+        .handleRetry(consumerName, message, cause, queueName)
+        .onSuccess(
+            retryResult -> {
+              if (retryResult) {
+                log.debug("消息重试安排成功 - 消费者: {}", consumerName);
+              } else {
+                log.warn("消息已发送到死信队列 - 消费者: {}", consumerName);
+              }
+              // 拒绝原消息
+              rejectMessage(message);
+            })
+        .onFailure(
+            retryError -> {
+              log.error("重试处理失败 - 消费者: {}", consumerName, retryError);
+              // 拒绝原消息
+              rejectMessage(message);
+            });
   }
 
   /**
@@ -267,9 +264,7 @@ public class EnhancedConsumerManager extends ConsumerManager {
     return new DeadLetterHandler.DeadLetterStats(consumerName, 0, null);
   }
 
-  /**
-   * 重试配置类
-   */
+  /** 重试配置类 */
   public static class RetryConfig {
     private final RetryHandler.RetryStrategy retryStrategy;
     private final DeadLetterHandler.DeadLetterConfig deadLetterConfig;
@@ -279,12 +274,14 @@ public class EnhancedConsumerManager extends ConsumerManager {
       this(retryStrategy, null, null);
     }
 
-    public RetryConfig(RetryHandler.RetryStrategy retryStrategy,
+    public RetryConfig(
+        RetryHandler.RetryStrategy retryStrategy,
         DeadLetterHandler.DeadLetterConfig deadLetterConfig) {
       this(retryStrategy, deadLetterConfig, null);
     }
 
-    public RetryConfig(RetryHandler.RetryStrategy retryStrategy,
+    public RetryConfig(
+        RetryHandler.RetryStrategy retryStrategy,
         DeadLetterHandler.DeadLetterConfig deadLetterConfig,
         String targetQueue) {
       this.retryStrategy = retryStrategy;
@@ -306,7 +303,8 @@ public class EnhancedConsumerManager extends ConsumerManager {
 
     @Override
     public String toString() {
-      return String.format("RetryConfig{retryStrategy=%s, deadLetterQueue=%s, targetQueue=%s}",
+      return String.format(
+          "RetryConfig{retryStrategy=%s, deadLetterQueue=%s, targetQueue=%s}",
           retryStrategy,
           deadLetterConfig != null ? deadLetterConfig.getQueueName() : "none",
           targetQueue);

@@ -3,27 +3,31 @@ package com.vertx.template.mq.config;
 import io.vertx.rabbitmq.RabbitMQOptions;
 import lombok.Data;
 
-/**
- * RabbitMQ公共配置类
- * 包含连接信息、连接池配置等通用设置
- */
+/** RabbitMQ公共配置类 包含连接信息、连接池配置等通用设置 */
 @Data
 public class RabbitMqConfig {
 
   /** 默认主机地址 */
   private static final String DEFAULT_HOST = "localhost";
+
   /** 默认端口 */
   private static final int DEFAULT_PORT = 5672;
+
   /** 默认用户名 */
   private static final String DEFAULT_USERNAME = "guest";
+
   /** 默认密码 */
   private static final String DEFAULT_PASSWORD = "guest";
+
   /** 默认虚拟主机 */
   private static final String DEFAULT_VIRTUAL_HOST = "/";
+
   /** 默认连接池大小 */
   private static final int DEFAULT_POOL_SIZE = 10;
+
   /** 默认心跳间隔(秒) */
   private static final int DEFAULT_HEARTBEAT = 60;
+
   /** 默认连接超时(毫秒) */
   private static final int DEFAULT_CONNECTION_TIMEOUT = 60000;
 
@@ -75,9 +79,12 @@ public class RabbitMqConfig {
    * @return 如果配置有效返回true，否则返回false
    */
   public boolean isValid() {
-    return host != null && !host.trim().isEmpty()
-        && port > 0 && port <= 65535
-        && username != null && !username.trim().isEmpty()
+    return host != null
+        && !host.trim().isEmpty()
+        && port > 0
+        && port <= 65535
+        && username != null
+        && !username.trim().isEmpty()
         && password != null
         && poolSize > 0
         && heartbeat >= 0
@@ -117,7 +124,7 @@ public class RabbitMqConfig {
    */
   public String getConnectionUri() {
     String protocol = sslEnabled ? "amqps" : "amqp";
-    return String.format("%s://%s:%s@%s:%d%s",
-        protocol, username, password, host, port, virtualHost);
+    return String.format(
+        "%s://%s:%s@%s:%d%s", protocol, username, password, host, port, virtualHost);
   }
 }

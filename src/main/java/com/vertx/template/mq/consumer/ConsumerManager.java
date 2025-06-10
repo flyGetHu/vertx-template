@@ -3,25 +3,19 @@ package com.vertx.template.mq.consumer;
 import com.vertx.template.mq.config.ConsumerConfig;
 import com.vertx.template.mq.config.RabbitMqConfig;
 import com.vertx.template.mq.consumer.annotation.RabbitConsumer;
-import com.vertx.template.mq.enums.QueueProperties;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.QueueOptions;
 import io.vertx.rabbitmq.RabbitMQClient;
 import io.vertx.rabbitmq.RabbitMQConsumer;
 import io.vertx.rabbitmq.RabbitMQMessage;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 消费者管理器
- * 为每个消费者创建独立的RabbitMQClient，避免线程安全问题
- */
+/** 消费者管理器 为每个消费者创建独立的RabbitMQClient，避免线程安全问题 */
 @Slf4j
 @Singleton
 public class ConsumerManager {
@@ -34,7 +28,7 @@ public class ConsumerManager {
   /**
    * 构造器
    *
-   * @param vertx  Vert.x实例
+   * @param vertx Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
@@ -47,7 +41,7 @@ public class ConsumerManager {
    * 根据注解配置启动消费者
    *
    * @param messageConsumer 消息消费者实例
-   * @param annotation      消费者注解
+   * @param annotation 消费者注解
    */
   public void startConsumer(MessageConsumer messageConsumer, RabbitConsumer annotation) {
     if (!annotation.enabled()) {
@@ -63,7 +57,7 @@ public class ConsumerManager {
    * 根据配置启动消费者
    *
    * @param messageConsumer 消息消费者实例
-   * @param consumerConfig  消费者配置
+   * @param consumerConfig 消费者配置
    */
   public void startConsumer(MessageConsumer messageConsumer, ConsumerConfig consumerConfig) {
     final String consumerName = messageConsumer.getConsumerName();
@@ -127,9 +121,7 @@ public class ConsumerManager {
     }
   }
 
-  /**
-   * 停止所有消费者
-   */
+  /** 停止所有消费者 */
   public void stopAllConsumers() {
     log.info("正在停止所有消费者...");
 
@@ -177,27 +169,30 @@ public class ConsumerManager {
     try {
       // 声明交换机（如果指定了交换机）
       if (config.getExchangeName() != null && !config.getExchangeName().isEmpty()) {
-        Future.await(client.exchangeDeclare(
-            config.getExchangeName(),
-            config.getExchangeType().getValue(),
-            config.isDurable(),
-            config.isAutoDelete()));
+        Future.await(
+            client.exchangeDeclare(
+                config.getExchangeName(),
+                config.getExchangeType().getValue(),
+                config.isDurable(),
+                config.isAutoDelete()));
       }
 
       // 声明队列
-      Future.await(client.queueDeclare(
-          config.getQueueName(),
-          config.isDurable(),
-          config.isExclusive(),
-          config.isAutoDelete(),
-          config.getQueueArgumentsAsJson()));
+      Future.await(
+          client.queueDeclare(
+              config.getQueueName(),
+              config.isDurable(),
+              config.isExclusive(),
+              config.isAutoDelete(),
+              config.getQueueArgumentsAsJson()));
 
       // 绑定队列到交换机（如果指定了交换机）
       if (config.getExchangeName() != null && !config.getExchangeName().isEmpty()) {
-        Future.await(client.queueBind(
-            config.getQueueName(),
-            config.getExchangeName(),
-            config.getRoutingKey() != null ? config.getRoutingKey() : ""));
+        Future.await(
+            client.queueBind(
+                config.getQueueName(),
+                config.getExchangeName(),
+                config.getRoutingKey() != null ? config.getRoutingKey() : ""));
       }
 
     } catch (Exception e) {
@@ -208,25 +203,26 @@ public class ConsumerManager {
   /**
    * 创建消费者
    *
-   * @param client          RabbitMQ客户端
+   * @param client RabbitMQ客户端
    * @param messageConsumer 消息处理器
-   * @param config          消费者配置
+   * @param config 消费者配置
    * @return 消费者实例
    */
-  private RabbitMQConsumer createConsumer(RabbitMQClient client,
-      MessageConsumer messageConsumer,
-      ConsumerConfig config) {
+  private RabbitMQConsumer createConsumer(
+      RabbitMQClient client, MessageConsumer messageConsumer, ConsumerConfig config) {
     try {
       // 设置QoS
       Future.await(client.basicQos(config.getQos()));
 
       // 创建队列选项
-      final QueueOptions options = new QueueOptions()
-          .setAutoAck(config.isAutoAck())
-          .setMaxInternalQueueSize(1000); // 设置内部队列大小
+      final QueueOptions options =
+          new QueueOptions()
+              .setAutoAck(config.isAutoAck())
+              .setMaxInternalQueueSize(1000); // 设置内部队列大小
 
       // 创建消费者
-      final RabbitMQConsumer consumer = Future.await(client.basicConsumer(config.getQueueName(), options));
+      final RabbitMQConsumer consumer =
+          Future.await(client.basicConsumer(config.getQueueName(), options));
 
       // 设置消息处理器
       consumer.handler(message -> handleMessage(messageConsumer, message, config.isAutoAck()));
@@ -241,10 +237,11 @@ public class ConsumerManager {
    * 处理接收到的消息
    *
    * @param messageConsumer 消息处理器
-   * @param message         接收到的消息
-   * @param autoAck         是否自动确认
+   * @param message 接收到的消息
+   * @param autoAck 是否自动确认
    */
-  private void handleMessage(MessageConsumer messageConsumer, RabbitMQMessage message, boolean autoAck) {
+  private void handleMessage(
+      MessageConsumer messageConsumer, RabbitMQMessage message, boolean autoAck) {
     final String consumerName = messageConsumer.getConsumerName();
 
     try {

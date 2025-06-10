@@ -3,20 +3,17 @@ package com.vertx.template.mq.config;
 import com.vertx.template.mq.enums.ExchangeType;
 import com.vertx.template.mq.enums.QueueProperties;
 import io.vertx.core.json.JsonObject;
-import lombok.Data;
-
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
 
-/**
- * 消费者配置类
- * 包含队列名称、交换机、路由键等队列特定配置
- */
+/** 消费者配置类 包含队列名称、交换机、路由键等队列特定配置 */
 @Data
 public class ConsumerConfig {
 
   /** 默认QoS值 */
   private static final int DEFAULT_QOS = 1;
+
   /** 默认消费者数量 */
   private static final int DEFAULT_CONSUMER_COUNT = 1;
 
@@ -65,9 +62,9 @@ public class ConsumerConfig {
   /**
    * 构造器 - 指定队列名称和交换机信息
    *
-   * @param queueName    队列名称
+   * @param queueName 队列名称
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
+   * @param routingKey 路由键
    */
   public ConsumerConfig(String queueName, String exchangeName, String routingKey) {
     this.queueName = queueName;
@@ -78,13 +75,13 @@ public class ConsumerConfig {
   /**
    * 构造器 - 完整配置
    *
-   * @param queueName    队列名称
+   * @param queueName 队列名称
    * @param exchangeName 交换机名称
    * @param exchangeType 交换机类型
-   * @param routingKey   路由键
+   * @param routingKey 路由键
    */
-  public ConsumerConfig(String queueName, String exchangeName,
-      ExchangeType exchangeType, String routingKey) {
+  public ConsumerConfig(
+      String queueName, String exchangeName, ExchangeType exchangeType, String routingKey) {
     this.queueName = queueName;
     this.exchangeName = exchangeName;
     this.exchangeType = exchangeType;
@@ -97,15 +94,13 @@ public class ConsumerConfig {
    * @return 如果配置有效返回true，否则返回false
    */
   public boolean isValid() {
-    return queueName != null && !queueName.trim().isEmpty()
-        && qos > 0
-        && consumerCount > 0;
+    return queueName != null && !queueName.trim().isEmpty() && qos > 0 && consumerCount > 0;
   }
 
   /**
    * 设置死信队列配置
    *
-   * @param deadLetterExchange   死信交换机
+   * @param deadLetterExchange 死信交换机
    * @param deadLetterRoutingKey 死信路由键
    * @return 当前配置对象(链式调用)
    */
@@ -172,7 +167,7 @@ public class ConsumerConfig {
   /**
    * 添加自定义队列参数
    *
-   * @param key   参数键
+   * @param key 参数键
    * @param value 参数值
    * @return 当前配置对象(链式调用)
    */

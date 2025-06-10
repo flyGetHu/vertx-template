@@ -1,17 +1,13 @@
 package com.vertx.template.mq.consumer.retry;
 
 import io.vertx.rabbitmq.RabbitMQMessage;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 可重试消息包装类
- * 用于包装原始消息并携带重试相关的元数据
- */
+/** 可重试消息包装类 用于包装原始消息并携带重试相关的元数据 */
 @Data
 @Slf4j
 public class RetryableMessage {
@@ -41,7 +37,7 @@ public class RetryableMessage {
    * 构造器
    *
    * @param originalMessage 原始消息
-   * @param consumerName    消费者名称
+   * @param consumerName 消费者名称
    */
   public RetryableMessage(RabbitMQMessage originalMessage, String consumerName) {
     this.originalMessage = originalMessage;
@@ -56,9 +52,7 @@ public class RetryableMessage {
     extractFailureHistory(originalMessage);
   }
 
-  /**
-   * 增加重试次数
-   */
+  /** 增加重试次数 */
   public void incrementRetryCount() {
     this.retryCount++;
     this.lastRetryTime = LocalDateTime.now();
@@ -71,7 +65,8 @@ public class RetryableMessage {
    * @param cause 失败原因
    */
   public void recordFailure(Throwable cause) {
-    String errorMessage = cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
+    String errorMessage =
+        cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
     failureHistory.put(retryCount, errorMessage);
     log.debug("记录消费者 {} 第 {} 次处理失败: {}", consumerName, retryCount, errorMessage);
   }
@@ -145,8 +140,11 @@ public class RetryableMessage {
 
     // 死信相关属性
     headers.put("x-death-time", LocalDateTime.now().toString());
-    headers.put("x-death-reason",
-        finalCause.getMessage() != null ? finalCause.getMessage() : finalCause.getClass().getSimpleName());
+    headers.put(
+        "x-death-reason",
+        finalCause.getMessage() != null
+            ? finalCause.getMessage()
+            : finalCause.getClass().getSimpleName());
     headers.put("x-total-failures", failureHistory.size());
     headers.put("x-is-dead-letter", true);
 
@@ -156,7 +154,7 @@ public class RetryableMessage {
   /**
    * 设置扩展属性
    *
-   * @param key   属性键
+   * @param key 属性键
    * @param value 属性值
    */
   public void setProperty(String key, Object value) {
@@ -218,7 +216,8 @@ public class RetryableMessage {
 
   @Override
   public String toString() {
-    return String.format("RetryableMessage{consumerName='%s', retryCount=%d, failureCount=%d, firstProcessTime=%s}",
+    return String.format(
+        "RetryableMessage{consumerName='%s', retryCount=%d, failureCount=%d, firstProcessTime=%s}",
         consumerName, retryCount, failureHistory.size(), firstProcessTime);
   }
 }

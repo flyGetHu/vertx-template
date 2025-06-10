@@ -2,10 +2,7 @@ package com.vertx.template.mq.consumer;
 
 import io.vertx.rabbitmq.RabbitMQMessage;
 
-/**
- * 消息消费者接口
- * 定义消息处理的基本方法
- */
+/** 消息消费者接口 定义消息处理的基本方法 */
 public interface MessageConsumer {
 
   /**
@@ -29,24 +26,19 @@ public interface MessageConsumer {
    * 消息处理失败时的回调
    *
    * @param message 失败的消息
-   * @param cause   失败原因
+   * @param cause 失败原因
    */
   default void onMessageFailed(RabbitMQMessage message, Throwable cause) {
     // 默认实现：记录错误日志
-    System.err.println("消息处理失败 - 消费者: " + getConsumerName() +
-        ", 错误: " + cause.getMessage());
+    System.err.println("消息处理失败 - 消费者: " + getConsumerName() + ", 错误: " + cause.getMessage());
   }
 
-  /**
-   * 消费者启动时的初始化回调
-   */
+  /** 消费者启动时的初始化回调 */
   default void onStart() {
     // 默认实现：无操作
   }
 
-  /**
-   * 消费者停止时的清理回调
-   */
+  /** 消费者停止时的清理回调 */
   default void onStop() {
     // 默认实现：无操作
   }

@@ -3,19 +3,14 @@ package com.vertx.template.mq.consumer.retry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rabbitmq.RabbitMQMessage;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 死信队列处理器
- * 负责管理死信队列和处理死信消息
- */
+/** 死信队列处理器 负责管理死信队列和处理死信消息 */
 @Slf4j
 @Singleton
 public class DeadLetterHandler {
@@ -27,7 +22,7 @@ public class DeadLetterHandler {
   /**
    * 构造器
    *
-   * @param vertx            Vert.x实例
+   * @param vertx Vert.x实例
    * @param messagePublisher 消息发布器
    */
   @Inject
@@ -39,7 +34,7 @@ public class DeadLetterHandler {
   /**
    * 配置消费者的死信队列
    *
-   * @param consumerName     消费者名称
+   * @param consumerName 消费者名称
    * @param deadLetterConfig 死信队列配置
    */
   public void configureDeadLetter(String consumerName, DeadLetterConfig deadLetterConfig) {
@@ -50,14 +45,13 @@ public class DeadLetterHandler {
   /**
    * 处理死信消息
    *
-   * @param consumerName     消费者名称
+   * @param consumerName 消费者名称
    * @param retryableMessage 可重试消息
-   * @param finalCause       最终失败原因
+   * @param finalCause 最终失败原因
    * @return 处理结果的Future
    */
-  public Future<Boolean> handleDeadLetter(String consumerName,
-      RetryableMessage retryableMessage,
-      Throwable finalCause) {
+  public Future<Boolean> handleDeadLetter(
+      String consumerName, RetryableMessage retryableMessage, Throwable finalCause) {
     DeadLetterConfig config = deadLetterConfigs.get(consumerName);
 
     if (config == null) {
@@ -65,30 +59,39 @@ public class DeadLetterHandler {
       return handleDefaultDeadLetter(consumerName, retryableMessage, finalCause);
     }
 
-    log.error("消费者 {} 消息处理失败，发送到死信队列 {} - 原因: {}",
-        consumerName, config.getQueueName(), finalCause.getMessage());
+    log.error(
+        "消费者 {} 消息处理失败，发送到死信队列 {} - 原因: {}",
+        consumerName,
+        config.getQueueName(),
+        finalCause.getMessage());
 
     // 记录死信信息
     recordDeadLetterInfo(consumerName, retryableMessage, finalCause);
 
     // 确保死信队列存在
-    return messagePublisher.ensureDeadLetterQueue(config.getQueueName())
-        .compose(v -> {
-          // 发送到死信队列
-          return messagePublisher.publishDeadLetterMessage(retryableMessage, config.getQueueName(), finalCause);
-        })
-        .compose(v -> {
-          // 执行死信处理回调
-          if (config.getHandler() != null) {
-            return executeDeadLetterCallback(config.getHandler(), retryableMessage, finalCause);
-          }
-          return Future.succeededFuture();
-        })
+    return messagePublisher
+        .ensureDeadLetterQueue(config.getQueueName())
+        .compose(
+            v -> {
+              // 发送到死信队列
+              return messagePublisher.publishDeadLetterMessage(
+                  retryableMessage, config.getQueueName(), finalCause);
+            })
+        .compose(
+            v -> {
+              // 执行死信处理回调
+              if (config.getHandler() != null) {
+                return executeDeadLetterCallback(config.getHandler(), retryableMessage, finalCause);
+              }
+              return Future.succeededFuture();
+            })
         .map(false) // 返回false表示消息处理失败
-        .onSuccess(result -> log.info("死信消息处理完成 - 消费者: {}, 队列: {}",
-            consumerName, config.getQueueName()))
-        .onFailure(cause -> log.error("死信消息处理失败 - 消费者: {}, 队列: {}",
-            consumerName, config.getQueueName(), cause));
+        .onSuccess(
+            result -> log.info("死信消息处理完成 - 消费者: {}, 队列: {}", consumerName, config.getQueueName()))
+        .onFailure(
+            cause ->
+                log.error(
+                    "死信消息处理失败 - 消费者: {}, 队列: {}", consumerName, config.getQueueName(), cause));
   }
 
   /**
@@ -130,52 +133,54 @@ public class DeadLetterHandler {
   /**
    * 处理默认死信逻辑
    *
-   * @param consumerName     消费者名称
+   * @param consumerName 消费者名称
    * @param retryableMessage 可重试消息
-   * @param finalCause       最终失败原因
+   * @param finalCause 最终失败原因
    * @return 处理结果的Future
    */
-  private Future<Boolean> handleDefaultDeadLetter(String consumerName,
-      RetryableMessage retryableMessage,
-      Throwable finalCause) {
+  private Future<Boolean> handleDefaultDeadLetter(
+      String consumerName, RetryableMessage retryableMessage, Throwable finalCause) {
     String defaultQueue = getDefaultDeadLetterQueueName(consumerName);
 
-    log.warn("消费者 {} 未配置死信队列，使用默认队列 {} - 原因: {}",
-        consumerName, defaultQueue, finalCause.getMessage());
+    log.warn(
+        "消费者 {} 未配置死信队列，使用默认队列 {} - 原因: {}", consumerName, defaultQueue, finalCause.getMessage());
 
     // 记录死信信息
     recordDeadLetterInfo(consumerName, retryableMessage, finalCause);
 
     // 发送到默认死信队列
-    return messagePublisher.ensureDeadLetterQueue(defaultQueue)
-        .compose(v -> messagePublisher.publishDeadLetterMessage(retryableMessage, defaultQueue, finalCause))
+    return messagePublisher
+        .ensureDeadLetterQueue(defaultQueue)
+        .compose(
+            v ->
+                messagePublisher.publishDeadLetterMessage(
+                    retryableMessage, defaultQueue, finalCause))
         .map(false)
-        .onSuccess(result -> log.info("默认死信消息处理完成 - 消费者: {}, 队列: {}",
-            consumerName, defaultQueue))
-        .onFailure(cause -> log.error("默认死信消息处理失败 - 消费者: {}, 队列: {}",
-            consumerName, defaultQueue, cause));
+        .onSuccess(result -> log.info("默认死信消息处理完成 - 消费者: {}, 队列: {}", consumerName, defaultQueue))
+        .onFailure(
+            cause -> log.error("默认死信消息处理失败 - 消费者: {}, 队列: {}", consumerName, defaultQueue, cause));
   }
 
   /**
    * 记录死信信息
    *
-   * @param consumerName     消费者名称
+   * @param consumerName 消费者名称
    * @param retryableMessage 可重试消息
-   * @param finalCause       最终失败原因
+   * @param finalCause 最终失败原因
    */
-  private void recordDeadLetterInfo(String consumerName,
-      RetryableMessage retryableMessage,
-      Throwable finalCause) {
-    JsonObject deadLetterInfo = new JsonObject()
-        .put("consumerName", consumerName)
-        .put("retryCount", retryableMessage.getRetryCount())
-        .put("firstProcessTime", retryableMessage.getFirstProcessTime().toString())
-        .put("lastRetryTime", retryableMessage.getLastRetryTime().toString())
-        .put("failureReason", finalCause.getMessage())
-        .put("failureType", finalCause.getClass().getSimpleName())
-        .put("deadLetterTime", LocalDateTime.now().toString())
-        .put("messageSize", retryableMessage.getBody().length)
-        .put("totalFailures", retryableMessage.getFailureHistory().size());
+  private void recordDeadLetterInfo(
+      String consumerName, RetryableMessage retryableMessage, Throwable finalCause) {
+    JsonObject deadLetterInfo =
+        new JsonObject()
+            .put("consumerName", consumerName)
+            .put("retryCount", retryableMessage.getRetryCount())
+            .put("firstProcessTime", retryableMessage.getFirstProcessTime().toString())
+            .put("lastRetryTime", retryableMessage.getLastRetryTime().toString())
+            .put("failureReason", finalCause.getMessage())
+            .put("failureType", finalCause.getClass().getSimpleName())
+            .put("deadLetterTime", LocalDateTime.now().toString())
+            .put("messageSize", retryableMessage.getBody().length)
+            .put("totalFailures", retryableMessage.getFailureHistory().size());
 
     log.warn("死信消息记录: {}", deadLetterInfo.encode());
 
@@ -187,16 +192,16 @@ public class DeadLetterHandler {
   /**
    * 执行死信处理回调
    *
-   * @param handler          死信处理器
+   * @param handler 死信处理器
    * @param retryableMessage 可重试消息
-   * @param finalCause       最终失败原因
+   * @param finalCause 最终失败原因
    * @return 执行结果的Future
    */
-  private Future<Void> executeDeadLetterCallback(DeadLetterProcessor handler,
-      RetryableMessage retryableMessage,
-      Throwable finalCause) {
+  private Future<Void> executeDeadLetterCallback(
+      DeadLetterProcessor handler, RetryableMessage retryableMessage, Throwable finalCause) {
     try {
-      return handler.process(retryableMessage, finalCause)
+      return handler
+          .process(retryableMessage, finalCause)
           .onSuccess(v -> log.debug("死信处理回调执行成功"))
           .onFailure(cause -> log.error("死信处理回调执行失败", cause));
     } catch (Exception e) {
@@ -215,9 +220,7 @@ public class DeadLetterHandler {
     return consumerName + ".dlq";
   }
 
-  /**
-   * 死信队列配置类
-   */
+  /** 死信队列配置类 */
   public static class DeadLetterConfig {
     private final String queueName;
     private final DeadLetterProcessor handler;
@@ -232,8 +235,8 @@ public class DeadLetterHandler {
       this(queueName, handler, true, false);
     }
 
-    public DeadLetterConfig(String queueName, DeadLetterProcessor handler,
-        boolean durable, boolean autoDelete) {
+    public DeadLetterConfig(
+        String queueName, DeadLetterProcessor handler, boolean durable, boolean autoDelete) {
       this.queueName = queueName;
       this.handler = handler;
       this.durable = durable;
@@ -257,15 +260,14 @@ public class DeadLetterHandler {
     }
   }
 
-  /**
-   * 死信统计信息类
-   */
+  /** 死信统计信息类 */
   public static class DeadLetterStats {
     private final String consumerName;
     private final int totalDeadLetters;
     private final LocalDateTime lastDeadLetterTime;
 
-    public DeadLetterStats(String consumerName, int totalDeadLetters, LocalDateTime lastDeadLetterTime) {
+    public DeadLetterStats(
+        String consumerName, int totalDeadLetters, LocalDateTime lastDeadLetterTime) {
       this.consumerName = consumerName;
       this.totalDeadLetters = totalDeadLetters;
       this.lastDeadLetterTime = lastDeadLetterTime;
@@ -284,16 +286,14 @@ public class DeadLetterHandler {
     }
   }
 
-  /**
-   * 死信处理器接口
-   */
+  /** 死信处理器接口 */
   @FunctionalInterface
   public interface DeadLetterProcessor {
     /**
      * 处理死信消息
      *
      * @param retryableMessage 可重试消息
-     * @param finalCause       最终失败原因
+     * @param finalCause 最终失败原因
      * @return 处理结果的Future
      */
     Future<Void> process(RetryableMessage retryableMessage, Throwable finalCause);

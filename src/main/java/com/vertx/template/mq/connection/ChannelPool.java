@@ -1,28 +1,24 @@
 package com.vertx.template.mq.connection;
 
-import com.vertx.template.mq.config.RabbitMqConfig;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.rabbitmq.RabbitMQClient;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * RabbitMQ通道池
- * 维护发送消息用的RabbitMQClient池，支持客户端的借用和归还
- */
+/** RabbitMQ通道池 维护发送消息用的RabbitMQClient池，支持客户端的借用和归还 */
 @Slf4j
 @Singleton
 public class ChannelPool {
 
   /** 默认池大小 */
   private static final int DEFAULT_POOL_SIZE = 10;
+
   /** 默认最大池大小 */
   private static final int DEFAULT_MAX_POOL_SIZE = 50;
 
@@ -38,7 +34,7 @@ public class ChannelPool {
   /**
    * 构造器
    *
-   * @param vertx             Vert.x实例
+   * @param vertx Vert.x实例
    * @param connectionManager 连接管理器
    */
   @Inject
@@ -47,9 +43,7 @@ public class ChannelPool {
     this.connectionManager = connectionManager;
   }
 
-  /**
-   * 初始化通道池
-   */
+  /** 初始化通道池 */
   public void initialize() {
     initialize(DEFAULT_POOL_SIZE, DEFAULT_MAX_POOL_SIZE);
   }
@@ -57,7 +51,7 @@ public class ChannelPool {
   /**
    * 初始化通道池
    *
-   * @param poolSize    初始池大小
+   * @param poolSize 初始池大小
    * @param maxPoolSize 最大池大小
    */
   public void initialize(int poolSize, int maxPoolSize) {
@@ -166,9 +160,7 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 关闭通道池
-   */
+  /** 关闭通道池 */
   public void close() {
     log.info("正在关闭通道池...");
 
@@ -201,7 +193,8 @@ public class ChannelPool {
    * @return 池状态字符串
    */
   public String getPoolStats() {
-    return String.format("通道池状态 - 可用: %d, 总计: %d, 最大: %d",
+    return String.format(
+        "通道池状态 - 可用: %d, 总计: %d, 最大: %d",
         availableClients.size(), currentPoolSize.get(), maxPoolSize);
   }
 

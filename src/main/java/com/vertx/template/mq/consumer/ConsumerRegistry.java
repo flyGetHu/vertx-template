@@ -2,35 +2,30 @@ package com.vertx.template.mq.consumer;
 
 import com.google.inject.Injector;
 import com.vertx.template.mq.consumer.annotation.RabbitConsumer;
-import io.vertx.core.Future;
-import lombok.extern.slf4j.Slf4j;
-import org.reflections.Reflections;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
+import org.reflections.Reflections;
 
-/**
- * 消费者注册器
- * 负责自动扫描、注册和管理消费者的生命周期
- */
+/** 消费者注册器 负责自动扫描、注册和管理消费者的生命周期 */
 @Slf4j
 @Singleton
 public class ConsumerRegistry {
 
   private final Injector injector;
   private final ConsumerManager consumerManager;
-  private final ConcurrentMap<String, MessageConsumer> registeredConsumers = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, MessageConsumer> registeredConsumers =
+      new ConcurrentHashMap<>();
   private final Map<String, RabbitConsumer> consumerAnnotations = new ConcurrentHashMap<>();
 
   /**
    * 构造器
    *
-   * @param injector        Guice注入器
+   * @param injector Guice注入器
    * @param consumerManager 消费者管理器
    */
   @Inject
@@ -88,7 +83,8 @@ public class ConsumerRegistry {
       }
 
       // 创建消费者实例
-      final MessageConsumer consumer = (MessageConsumer) consumerClass.getDeclaredConstructor().newInstance();
+      final MessageConsumer consumer =
+          (MessageConsumer) consumerClass.getDeclaredConstructor().newInstance();
       final String consumerName = consumer.getConsumerName();
 
       if (registeredConsumers.containsKey(consumerName)) {
@@ -148,9 +144,7 @@ public class ConsumerRegistry {
     }
   }
 
-  /**
-   * 停止所有注册的消费者
-   */
+  /** 停止所有注册的消费者 */
   public void stopAllConsumers() {
     log.info("正在停止所有注册的消费者...");
 

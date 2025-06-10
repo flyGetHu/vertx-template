@@ -4,16 +4,12 @@ import com.vertx.template.mq.config.RabbitMqConfig;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.rabbitmq.RabbitMQClient;
-import lombok.extern.slf4j.Slf4j;
-
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * RabbitMQ连接管理器
- * 基于Vert.x RabbitMQ客户端，管理连接的创建和维护
- */
+/** RabbitMQ连接管理器 基于Vert.x RabbitMQ客户端，管理连接的创建和维护 */
 @Slf4j
 @Singleton
 public class RabbitMqConnectionManager {
@@ -26,7 +22,7 @@ public class RabbitMqConnectionManager {
   /**
    * 构造器
    *
-   * @param vertx  Vert.x实例
+   * @param vertx Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
@@ -56,14 +52,17 @@ public class RabbitMqConnectionManager {
       client = RabbitMQClient.create(vertx, config.toVertxOptions());
 
       // 启动客户端连接
-      return client.start()
-          .onSuccess(v -> {
-            initialized.set(true);
-            log.info("RabbitMQ连接管理器初始化完成");
-          })
-          .onFailure(cause -> {
-            log.error("初始化RabbitMQ连接管理器失败", cause);
-          });
+      return client
+          .start()
+          .onSuccess(
+              v -> {
+                initialized.set(true);
+                log.info("RabbitMQ连接管理器初始化完成");
+              })
+          .onFailure(
+              cause -> {
+                log.error("初始化RabbitMQ连接管理器失败", cause);
+              });
     } catch (Exception e) {
       log.error("创建RabbitMQ客户端失败", e);
       return Future.failedFuture(e);
@@ -96,14 +95,17 @@ public class RabbitMqConnectionManager {
     log.info("正在关闭RabbitMQ连接管理器...");
 
     if (client != null && client.isConnected()) {
-      return client.stop()
-          .onSuccess(v -> {
-            initialized.set(false);
-            log.info("RabbitMQ连接已关闭");
-          })
-          .onFailure(cause -> {
-            log.error("关闭RabbitMQ连接失败", cause);
-          });
+      return client
+          .stop()
+          .onSuccess(
+              v -> {
+                initialized.set(false);
+                log.info("RabbitMQ连接已关闭");
+              })
+          .onFailure(
+              cause -> {
+                log.error("关闭RabbitMQ连接失败", cause);
+              });
     }
 
     initialized.set(false);
@@ -126,8 +128,7 @@ public class RabbitMqConnectionManager {
    */
   public String getConnectionInfo() {
     if (client != null && client.isConnected()) {
-      return String.format("RabbitMQ连接状态: 已连接 - %s:%d",
-          config.getHost(), config.getPort());
+      return String.format("RabbitMQ连接状态: 已连接 - %s:%d", config.getHost(), config.getPort());
     } else {
       return "RabbitMQ连接状态: 未连接";
     }

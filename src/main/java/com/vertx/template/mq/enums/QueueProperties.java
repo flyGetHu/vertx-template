@@ -1,9 +1,6 @@
 package com.vertx.template.mq.enums;
 
-/**
- * 队列属性枚举
- * 定义队列的各种属性和参数
- */
+/** 队列属性枚举 定义队列的各种属性和参数 */
 public enum QueueProperties {
 
   /** 队列消息TTL */

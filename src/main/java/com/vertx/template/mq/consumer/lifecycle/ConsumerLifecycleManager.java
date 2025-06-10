@@ -6,16 +6,12 @@ import com.vertx.template.mq.consumer.ConsumerRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import lombok.extern.slf4j.Slf4j;
-
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 消费者生命周期管理器
- * 负责消费者的优雅启停、健康检查和资源管理
- */
+/** 消费者生命周期管理器 负责消费者的优雅启停、健康检查和资源管理 */
 @Slf4j
 @Singleton
 public class ConsumerLifecycleManager {
@@ -39,14 +35,17 @@ public class ConsumerLifecycleManager {
   /**
    * 构造器
    *
-   * @param vertx            Vert.x实例
+   * @param vertx Vert.x实例
    * @param consumerRegistry 消费者注册器
-   * @param consumerManager  消费者管理器
-   * @param consumerMonitor  消费者监控器
+   * @param consumerManager 消费者管理器
+   * @param consumerMonitor 消费者监控器
    */
   @Inject
-  public ConsumerLifecycleManager(Vertx vertx, ConsumerRegistry consumerRegistry,
-      ConsumerManager consumerManager, ConsumerMonitor consumerMonitor) {
+  public ConsumerLifecycleManager(
+      Vertx vertx,
+      ConsumerRegistry consumerRegistry,
+      ConsumerManager consumerManager,
+      ConsumerMonitor consumerMonitor) {
     this.vertx = vertx;
     this.consumerRegistry = consumerRegistry;
     this.consumerManager = consumerManager;
@@ -65,9 +64,9 @@ public class ConsumerLifecycleManager {
   /**
    * 启动消费者系统
    *
-   * @param basePackage         消费者扫描包路径
+   * @param basePackage 消费者扫描包路径
    * @param healthCheckInterval 健康检查间隔（毫秒）
-   * @param monitorInterval     监控间隔（毫秒）
+   * @param monitorInterval 监控间隔（毫秒）
    */
   public void start(String basePackage, long healthCheckInterval, long monitorInterval) {
     if (!isRunning.compareAndSet(false, true)) {
@@ -91,7 +90,8 @@ public class ConsumerLifecycleManager {
       registerShutdownHook();
 
       log.info("消费者生命周期管理系统启动成功");
-      log.info("已注册消费者数量: {}, 活跃消费者数量: {}",
+      log.info(
+          "已注册消费者数量: {}, 活跃消费者数量: {}",
           consumerRegistry.getRegisteredConsumerCount(),
           consumerRegistry.getActiveConsumerCount());
 
@@ -104,9 +104,7 @@ public class ConsumerLifecycleManager {
     }
   }
 
-  /**
-   * 停止消费者系统
-   */
+  /** 停止消费者系统 */
   public void stop() {
     if (!isRunning.get()) {
       log.warn("消费者系统未运行");
@@ -228,18 +226,19 @@ public class ConsumerLifecycleManager {
   private void startHealthCheck(long interval) {
     log.info("启动健康检查，间隔: {}ms", interval);
 
-    healthCheckTimerId = vertx.setPeriodic(interval, id -> {
-      try {
-        performHealthCheck();
-      } catch (Exception e) {
-        log.error("健康检查执行失败", e);
-      }
-    });
+    healthCheckTimerId =
+        vertx.setPeriodic(
+            interval,
+            id -> {
+              try {
+                performHealthCheck();
+              } catch (Exception e) {
+                log.error("健康检查执行失败", e);
+              }
+            });
   }
 
-  /**
-   * 停止健康检查
-   */
+  /** 停止健康检查 */
   private void stopHealthCheck() {
     if (healthCheckTimerId != -1) {
       vertx.cancelTimer(healthCheckTimerId);
@@ -248,9 +247,7 @@ public class ConsumerLifecycleManager {
     }
   }
 
-  /**
-   * 执行健康检查
-   */
+  /** 执行健康检查 */
   private void performHealthCheck() {
     final JsonObject health = getHealthStatus();
     final String status = health.getString("status");
@@ -321,26 +318,25 @@ public class ConsumerLifecycleManager {
     return Math.max(0.0, Math.min(1.0, baseScore));
   }
 
-  /**
-   * 注册关闭钩子
-   */
+  /** 注册关闭钩子 */
   private void registerShutdownHook() {
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      log.info("检测到系统关闭信号，正在优雅关闭消费者系统...");
-      try {
-        stop();
-        log.info("消费者系统已优雅关闭完成");
-      } catch (Exception e) {
-        log.error("消费者系统关闭失败", e);
-      }
-    }));
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  log.info("检测到系统关闭信号，正在优雅关闭消费者系统...");
+                  try {
+                    stop();
+                    log.info("消费者系统已优雅关闭完成");
+                  } catch (Exception e) {
+                    log.error("消费者系统关闭失败", e);
+                  }
+                }));
 
     log.info("已注册系统关闭钩子");
   }
 
-  /**
-   * 清理资源
-   */
+  /** 清理资源 */
   private void cleanup() {
     try {
       stopHealthCheck();

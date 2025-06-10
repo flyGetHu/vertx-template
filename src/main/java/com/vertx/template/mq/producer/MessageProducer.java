@@ -6,16 +6,12 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.RabbitMQClient;
-import lombok.extern.slf4j.Slf4j;
-
+import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 消息生产者
- * 提供统一的消息发送接口，支持事务、确认机制等高级特性
- */
+/** 消息生产者 提供统一的消息发送接口，支持事务、确认机制等高级特性 */
 @Slf4j
 @Singleton
 public class MessageProducer {
@@ -36,7 +32,7 @@ public class MessageProducer {
    * 发送简单消息到队列
    *
    * @param queueName 队列名称
-   * @param message   消息内容
+   * @param message 消息内容
    */
   public void sendToQueue(String queueName, String message) {
     sendToQueue(queueName, message, null);
@@ -45,8 +41,8 @@ public class MessageProducer {
   /**
    * 发送消息到队列（带属性）
    *
-   * @param queueName  队列名称
-   * @param message    消息内容
+   * @param queueName 队列名称
+   * @param message 消息内容
    * @param properties 消息属性
    */
   public void sendToQueue(String queueName, String message, JsonObject properties) {
@@ -66,8 +62,8 @@ public class MessageProducer {
    * 发送消息到交换机
    *
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
-   * @param message      消息内容
+   * @param routingKey 路由键
+   * @param message 消息内容
    */
   public void sendToExchange(String exchangeName, String routingKey, String message) {
     sendToExchange(exchangeName, routingKey, message, null);
@@ -77,11 +73,12 @@ public class MessageProducer {
    * 发送消息到交换机（带属性）
    *
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
-   * @param message      消息内容
-   * @param properties   消息属性
+   * @param routingKey 路由键
+   * @param message 消息内容
+   * @param properties 消息属性
    */
-  public void sendToExchange(String exchangeName, String routingKey, String message, JsonObject properties) {
+  public void sendToExchange(
+      String exchangeName, String routingKey, String message, JsonObject properties) {
     final RabbitMQClient client = Future.await(channelPool.borrowClient());
     try {
       Future.await(client.basicPublish(exchangeName, routingKey, Buffer.buffer(message)));
@@ -98,7 +95,7 @@ public class MessageProducer {
    * 批量发送消息到队列
    *
    * @param queueName 队列名称
-   * @param messages  消息列表
+   * @param messages 消息列表
    */
   public void batchSendToQueue(String queueName, List<String> messages) {
     if (messages == null || messages.isEmpty()) {
@@ -127,8 +124,8 @@ public class MessageProducer {
    * 批量发送消息到交换机
    *
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
-   * @param messages     消息列表
+   * @param routingKey 路由键
+   * @param messages 消息列表
    */
   public void batchSendToExchange(String exchangeName, String routingKey, List<String> messages) {
     if (messages == null || messages.isEmpty()) {
@@ -157,7 +154,7 @@ public class MessageProducer {
    * 发送 JSON 消息到队列
    *
    * @param queueName 队列名称
-   * @param jsonData  JSON数据
+   * @param jsonData JSON数据
    */
   public void sendJsonToQueue(String queueName, JsonObject jsonData) {
     sendToQueue(queueName, jsonData.encode(), createJsonProperties());
@@ -167,8 +164,8 @@ public class MessageProducer {
    * 发送 JSON 消息到交换机
    *
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
-   * @param jsonData     JSON数据
+   * @param routingKey 路由键
+   * @param jsonData JSON数据
    */
   public void sendJsonToExchange(String exchangeName, String routingKey, JsonObject jsonData) {
     sendToExchange(exchangeName, routingKey, jsonData.encode(), createJsonProperties());
@@ -179,15 +176,21 @@ public class MessageProducer {
    *
    * @param exchangeName 交换机名称
    * @param exchangeType 交换机类型
-   * @param durable      是否持久化
-   * @param autoDelete   是否自动删除
+   * @param durable 是否持久化
+   * @param autoDelete 是否自动删除
    */
-  public void declareExchange(String exchangeName, ExchangeType exchangeType, boolean durable, boolean autoDelete) {
+  public void declareExchange(
+      String exchangeName, ExchangeType exchangeType, boolean durable, boolean autoDelete) {
     final RabbitMQClient client = Future.await(channelPool.borrowClient());
     try {
-      Future.await(client.exchangeDeclare(exchangeName, exchangeType.getValue(), durable, autoDelete));
-      log.info("交换机声明成功 - 名称: {}, 类型: {}, 持久化: {}, 自动删除: {}",
-          exchangeName, exchangeType.getValue(), durable, autoDelete);
+      Future.await(
+          client.exchangeDeclare(exchangeName, exchangeType.getValue(), durable, autoDelete));
+      log.info(
+          "交换机声明成功 - 名称: {}, 类型: {}, 持久化: {}, 自动删除: {}",
+          exchangeName,
+          exchangeType.getValue(),
+          durable,
+          autoDelete);
     } catch (Exception cause) {
       log.error("声明交换机失败 - 名称: {}, 类型: {}", exchangeName, exchangeType.getValue(), cause);
       throw new RuntimeException("声明交换机失败", cause);
@@ -199,17 +202,18 @@ public class MessageProducer {
   /**
    * 声明队列
    *
-   * @param queueName  队列名称
-   * @param durable    是否持久化
-   * @param exclusive  是否排他
+   * @param queueName 队列名称
+   * @param durable 是否持久化
+   * @param exclusive 是否排他
    * @param autoDelete 是否自动删除
    */
-  public void declareQueue(String queueName, boolean durable, boolean exclusive, boolean autoDelete) {
+  public void declareQueue(
+      String queueName, boolean durable, boolean exclusive, boolean autoDelete) {
     final RabbitMQClient client = Future.await(channelPool.borrowClient());
     try {
       Future.await(client.queueDeclare(queueName, durable, exclusive, autoDelete));
-      log.info("队列声明成功 - 名称: {}, 持久化: {}, 排他: {}, 自动删除: {}",
-          queueName, durable, exclusive, autoDelete);
+      log.info(
+          "队列声明成功 - 名称: {}, 持久化: {}, 排他: {}, 自动删除: {}", queueName, durable, exclusive, autoDelete);
     } catch (Exception cause) {
       log.error("声明队列失败 - 名称: {}", queueName, cause);
       throw new RuntimeException("声明队列失败", cause);
@@ -221,9 +225,9 @@ public class MessageProducer {
   /**
    * 绑定队列到交换机
    *
-   * @param queueName    队列名称
+   * @param queueName 队列名称
    * @param exchangeName 交换机名称
-   * @param routingKey   路由键
+   * @param routingKey 路由键
    */
   public void bindQueue(String queueName, String exchangeName, String routingKey) {
     final RabbitMQClient client = Future.await(channelPool.borrowClient());
@@ -280,8 +284,6 @@ public class MessageProducer {
    * @return JSON消息属性
    */
   private JsonObject createJsonProperties() {
-    return new JsonObject()
-        .put("contentType", "application/json")
-        .put("contentEncoding", "UTF-8");
+    return new JsonObject().put("contentType", "application/json").put("contentEncoding", "UTF-8");
   }
 }

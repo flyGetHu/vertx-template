@@ -1,9 +1,6 @@
 package com.vertx.template.mq.enums;
 
-/**
- * 消息投递模式枚举
- * 定义消息的持久化策略
- */
+/** 消息投递模式枚举 定义消息的持久化策略 */
 public enum MessageDeliveryMode {
 
   /** 非持久化 - 消息存储在内存中 */

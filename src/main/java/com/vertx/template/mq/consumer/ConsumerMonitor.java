@@ -4,20 +4,16 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * 消费者监控组件
- * 负责监控消费者的健康状态、性能指标和异常统计
- */
+/** 消费者监控组件 负责监控消费者的健康状态、性能指标和异常统计 */
 @Slf4j
 @Singleton
 public class ConsumerMonitor {
@@ -51,14 +47,17 @@ public class ConsumerMonitor {
 
     log.info("启动消费者监控，间隔: {}ms", monitorIntervalMs);
 
-    monitorTimerId = vertx.setPeriodic(monitorIntervalMs, id -> {
-      try {
-        performHealthCheck();
-        logMetrics();
-      } catch (Exception e) {
-        log.error("监控检查失败", e);
-      }
-    });
+    monitorTimerId =
+        vertx.setPeriodic(
+            monitorIntervalMs,
+            id -> {
+              try {
+                performHealthCheck();
+                logMetrics();
+              } catch (Exception e) {
+                log.error("监控检查失败", e);
+              }
+            });
 
     monitoring = true;
     return Future.succeededFuture();
@@ -89,7 +88,7 @@ public class ConsumerMonitor {
   /**
    * 记录消息处理成功
    *
-   * @param consumerName   消费者名称
+   * @param consumerName 消费者名称
    * @param processingTime 处理时间（毫秒）
    */
   public void recordMessageSuccess(String consumerName, long processingTime) {
@@ -102,8 +101,8 @@ public class ConsumerMonitor {
   /**
    * 记录消息处理失败
    *
-   * @param consumerName   消费者名称
-   * @param cause          失败原因
+   * @param consumerName 消费者名称
+   * @param cause 失败原因
    * @param processingTime 处理时间（毫秒）
    */
   public void recordMessageFailure(String consumerName, Throwable cause, long processingTime) {
@@ -118,7 +117,7 @@ public class ConsumerMonitor {
    * 记录消息重试
    *
    * @param consumerName 消费者名称
-   * @param retryCount   重试次数
+   * @param retryCount 重试次数
    */
   public void recordMessageRetry(String consumerName, int retryCount) {
     ConsumerMetrics metrics = getOrCreateMetrics(consumerName);
@@ -145,24 +144,26 @@ public class ConsumerMonitor {
     JsonObject result = new JsonObject();
     JsonArray consumers = new JsonArray();
 
-    consumerMetrics.forEach((name, metrics) -> {
-      JsonObject consumerMetrics = new JsonObject()
-          .put("name", name)
-          .put("successCount", metrics.getSuccessCount())
-          .put("failureCount", metrics.getFailureCount())
-          .put("retryCount", metrics.getRetryCount())
-          .put("totalCount", metrics.getTotalCount())
-          .put("successRate", metrics.getSuccessRate())
-          .put("avgProcessingTime", metrics.getAvgProcessingTime())
-          .put("maxProcessingTime", metrics.getMaxProcessingTime())
-          .put("minProcessingTime", metrics.getMinProcessingTime())
-          .put("maxRetryCount", metrics.getMaxRetryCount())
-          .put("lastSuccessTime", metrics.getLastSuccessTime())
-          .put("lastFailureTime", metrics.getLastFailureTime())
-          .put("recentFailures", JsonObject.mapFrom(metrics.getRecentFailures()));
+    consumerMetrics.forEach(
+        (name, metrics) -> {
+          JsonObject consumerMetrics =
+              new JsonObject()
+                  .put("name", name)
+                  .put("successCount", metrics.getSuccessCount())
+                  .put("failureCount", metrics.getFailureCount())
+                  .put("retryCount", metrics.getRetryCount())
+                  .put("totalCount", metrics.getTotalCount())
+                  .put("successRate", metrics.getSuccessRate())
+                  .put("avgProcessingTime", metrics.getAvgProcessingTime())
+                  .put("maxProcessingTime", metrics.getMaxProcessingTime())
+                  .put("minProcessingTime", metrics.getMinProcessingTime())
+                  .put("maxRetryCount", metrics.getMaxRetryCount())
+                  .put("lastSuccessTime", metrics.getLastSuccessTime())
+                  .put("lastFailureTime", metrics.getLastFailureTime())
+                  .put("recentFailures", JsonObject.mapFrom(metrics.getRecentFailures()));
 
-      consumers.add(consumerMetrics);
-    });
+          consumers.add(consumerMetrics);
+        });
 
     result.put("consumers", consumers);
     result.put("totalConsumers", consumerMetrics.size());
@@ -181,9 +182,7 @@ public class ConsumerMonitor {
     log.info("已重置消费者 {} 的指标", consumerName);
   }
 
-  /**
-   * 重置所有指标
-   */
+  /** 重置所有指标 */
   public void resetAllMetrics() {
     consumerMetrics.clear();
     log.info("已重置所有消费者指标");
@@ -229,7 +228,8 @@ public class ConsumerMonitor {
       health.put("slowProcessing", true);
     }
 
-    health.put("successRate", successRate)
+    health
+        .put("successRate", successRate)
         .put("avgProcessingTime", avgProcessingTime)
         .put("totalMessages", metrics.getTotalCount())
         .put("recentFailures", metrics.getRecentFailures());
@@ -247,38 +247,39 @@ public class ConsumerMonitor {
     return consumerMetrics.computeIfAbsent(consumerName, k -> new ConsumerMetrics(consumerName));
   }
 
-  /**
-   * 执行健康检查
-   */
+  /** 执行健康检查 */
   private void performHealthCheck() {
-    consumerMetrics.forEach((name, metrics) -> {
-      JsonObject health = checkConsumerHealth(name);
-      String status = health.getString("status");
+    consumerMetrics.forEach(
+        (name, metrics) -> {
+          JsonObject health = checkConsumerHealth(name);
+          String status = health.getString("status");
 
-      if ("UNHEALTHY".equals(status)) {
-        log.warn("消费者 {} 健康状态异常: {}", name, health.encode());
-      } else if ("WARNING".equals(status)) {
-        log.warn("消费者 {} 健康状态警告: {}", name, health.encode());
-      }
-    });
+          if ("UNHEALTHY".equals(status)) {
+            log.warn("消费者 {} 健康状态异常: {}", name, health.encode());
+          } else if ("WARNING".equals(status)) {
+            log.warn("消费者 {} 健康状态警告: {}", name, health.encode());
+          }
+        });
   }
 
-  /**
-   * 记录指标日志
-   */
+  /** 记录指标日志 */
   private void logMetrics() {
     if (log.isDebugEnabled()) {
-      consumerMetrics.forEach((name, metrics) -> {
-        log.debug("消费者 {} 指标 - 成功: {}, 失败: {}, 重试: {}, 成功率: {:.2f}%, 平均处理时间: {:.2f}ms",
-            name, metrics.getSuccessCount(), metrics.getFailureCount(), metrics.getRetryCount(),
-            metrics.getSuccessRate() * 100, metrics.getAvgProcessingTime());
-      });
+      consumerMetrics.forEach(
+          (name, metrics) -> {
+            log.debug(
+                "消费者 {} 指标 - 成功: {}, 失败: {}, 重试: {}, 成功率: {:.2f}%, 平均处理时间: {:.2f}ms",
+                name,
+                metrics.getSuccessCount(),
+                metrics.getFailureCount(),
+                metrics.getRetryCount(),
+                metrics.getSuccessRate() * 100,
+                metrics.getAvgProcessingTime());
+          });
     }
   }
 
-  /**
-   * 消费者指标数据类
-   */
+  /** 消费者指标数据类 */
   @Data
   public static class ConsumerMetrics {
     private final String consumerName;

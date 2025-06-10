@@ -1,9 +1,6 @@
 package com.vertx.template.mq.enums;
 
-/**
- * RabbitMQ交换机类型枚举
- * 定义支持的交换机类型
- */
+/** RabbitMQ交换机类型枚举 定义支持的交换机类型 */
 public enum ExchangeType {
 
   /** 直连交换机 */

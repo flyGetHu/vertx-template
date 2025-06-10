@@ -1,17 +1,13 @@
 package com.vertx.template.mq.consumer.annotation;
 
 import com.vertx.template.mq.enums.ExchangeType;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * RabbitMQ消费者注解
- * 用于标记消费者方法，并配置队列信息
- */
-@Target({ ElementType.TYPE, ElementType.METHOD })
+/** RabbitMQ消费者注解 用于标记消费者方法，并配置队列信息 */
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RabbitConsumer {
 
