@@ -5,8 +5,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** 简化的RabbitMQ消费者注解 只保留基础的消费者配置功能 */
-@Target({ElementType.TYPE})
+/** RabbitMQ消费者注解 - 基于注解的声明式消费者配置 */
+@Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RabbitConsumer {
 
@@ -16,7 +16,7 @@ public @interface RabbitConsumer {
   /**
    * 是否自动确认消息
    *
-   * @return 默认false（手动确认）
+   * @return 默认false（手动确认，保证消息可靠性）
    */
   boolean autoAck() default false;
 
@@ -40,6 +40,25 @@ public @interface RabbitConsumer {
    * @return 默认1000ms
    */
   long retryDelayMs() default 1000L;
+
+  /**
+   * Prefetch Count - 消费者预取消息数量
+   *
+   * <p>
+   * 控制消费者同时处理的未确认消息数量，用于流量控制和负载均衡：
+   * <ul>
+   * <li>0: 无限制（不推荐，可能导致内存溢出）</li>
+   * <li>1: 严格的轮询分发，适合处理时间差异大的场景</li>
+   * <li>10-50: 适合大多数场景的平衡值</li>
+   * <li>100+: 高吞吐量场景，需要足够的内存</li>
+   * </ul>
+   *
+   * <p>
+   * <strong>注意</strong>：由于每个消费者使用独立通道，此设置仅对当前消费者生效
+   *
+   * @return 默认20，在性能和资源消耗之间取得平衡
+   */
+  int prefetchCount() default 20;
 
   /**
    * 消费者描述

@@ -10,17 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 示例消息消费者 展示如何使用@RabbitConsumer注解和MessageConsumer接口
  *
- * <p>注意：此消费者需要预先创建以下RabbitMQ基础设施： 1. 队列：example.queue 2. 交换机：user.exchange 3.
+ * <p>
+ * 注意：此消费者需要预先创建以下RabbitMQ基础设施： 1. 队列：example.queue 2. 交换机：user.exchange 3.
  * 绑定关系：queue绑定到exchange，routing key为user.*
  */
 @Slf4j
 @Singleton
-@RabbitConsumer(
-    queueName = "example.queue",
-    enabled = true,
-    autoAck = false,
-    maxRetries = 3,
-    retryDelayMs = 1000)
+@RabbitConsumer(queueName = "example.queue", enabled = true, autoAck = false, maxRetries = 3, retryDelayMs = 1000, prefetchCount = 10, // 预取10条消息，适合中等负载
+    description = "示例消息消费者 - 演示各种配置选项")
 public class ExampleMessageConsumer implements MessageConsumer {
 
   @Override
