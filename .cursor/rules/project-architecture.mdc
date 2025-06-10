@@ -1,0 +1,442 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Vert.x 项目架构规范
+
+## 📁 项目结构（符合阿里巴巴规范）
+
+### 核心目录结构
+```
+src/main/java/com/vertx/template/
+├── Run.java                    # 应用入口
+├── config/                     # 配置模块
+│   ├── ConfigLoader.java       # 配置加载器
+│   ├── DatabaseConfig.java     # 数据库配置
+│   └── RouterConfig.java       # 路由配置
+├── controller/                 # 控制器层（Web层）
+│   ├── AuthController.java     # 认证控制器
+│   ├── UserController.java     # 用户控制器
+│   └── ProductController.java  # 产品控制器
+├── service/                    # 服务层（业务逻辑层）
+│   ├── impl/                   # 服务实现类
+│   └── UserService.java        # 用户服务接口
+├── repository/                 # 数据访问层（持久层）
+│   ├── common/                 # 通用仓储接口
+│   ├── impl/                   # 数据访问实现类
+│   └── UserRepository.java     # 用户仓储接口
+├── model/                      # 数据模型层
+│   ├── dto/                    # 数据传输对象
+│   ├── entity/                 # 数据库实体对象
+│   ├── vo/                     # 视图对象
+│   └── bo/                     # 业务对象
+├── router/                     # 路由系统
+│   ├── annotation/             # 路由注解
+│   ├── handler/                # 路由处理器
+│   └── cache/                  # 路由缓存
+├── middleware/                 # 中间件系统
+│   ├── auth/                   # 认证中间件
+│   ├── ratelimit/              # 限流中间件
+│   └── core/                   # 核心中间件
+├── di/                         # 依赖注入模块
+├── exception/                  # 异常定义
+├── constants/                  # 常量定义
+├── utils/                      # 工具类
+└── verticle/                   # Verticle组件
+```
+
+### 包命名规范
+| 包类型 | 命名规则 | 示例 | 说明 |
+|--------|----------|------|------|
+| **基础包** | `com.{公司}.{项目}` | `com.vertx.template` | 公司域名倒置+项目名 |
+| **控制器包** | `{基础包}.controller` | `com.vertx.template.controller` | Web层控制器 |
+| **服务包** | `{基础包}.service` | `com.vertx.template.service` | 业务逻辑层 |
+| **数据访问包** | `{基础包}.repository` | `com.vertx.template.repository` | 数据访问层 |
+| **实体包** | `{基础包}.model.entity` | `com.vertx.template.model.entity` | 数据库实体 |
+| **DTO包** | `{基础包}.model.dto` | `com.vertx.template.model.dto` | 数据传输对象 |
+
+## 🏗️ MVC架构模式
+
+### 分层架构职责
+| 层级 | 职责 | 示例文件 | 阿里规范对应层 |
+|------|------|----------|---------------|
+| **Controller** | 接收HTTP请求，参数验证，调用服务层 | `UserController.java` | Web层 |
+| **Service** | 业务逻辑处理，数据转换 | `UserService.java` | Service层 |
+| **Repository** | 数据访问，外部API调用 | `UserRepository.java` | DAO层 |
+| **DTO** | 数据传输对象，用于层间数据传递 | `UserDto.java` | 领域模型 |
+| **Entity** | 数据库实体对象，与数据表对应 | `User.java` | 领域模型 |
+
+### 数据流程
+1. **请求接收** → 路由层接收HTTP请求
+2. **参数验证** → 控制器验证请求参数
+3. **业务处理** → 服务层执行业务逻辑
+4. **数据访问** → 仓库层处理数据操作
+5. **结果返回** → 响应包装器统一返回格式
+6. **异常处理** → 全局异常处理器处理错误
+
+### 层间调用规则
+```java
+// ✅ 正确的调用方向
+Controller → Service → Repository
+
+// ❌ 禁止的调用
+Repository → Service  // 下层不能调用上层
+Controller → Repository  // 跨层调用
+```
+
+## 💉 依赖注入系统（Google Guice）
+
+### 核心注解
+| 注解 | 用途 | 示例 |
+|------|------|------|
+| `@Inject` | 标记依赖注入点 | `@Inject public UserController(UserService service)` |
+| `@Singleton` | 单例模式 | `@Singleton public class UserServiceImpl` |
+| `@Provides` | 工厂方法 | `@Provides Router provideRouter()` |
+
+### 依赖注入配置
+```java
+// 1. 服务接口定义
+public interface UserService {
+    User getUserById(String id);
+    List<User> getAllUsers();
+}
+
+// 2. 服务实现
+@Singleton
+public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+
+    @Inject
+    public UserServiceImpl(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+}
+
+// 3. 模块配置
+public class AppModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        bind(UserService.class).to(UserServiceImpl.class);
+        bind(UserRepository.class).to(UserRepositoryImpl.class);
+    }
+}
+
+// 4. 控制器注入
+@RestController
+@Singleton
+public class UserController {
+    private final UserService userService;
+
+    @Inject
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+}
+```
+
+### 添加新服务步骤
+1. **定义接口**：创建服务接口
+2. **实现服务**：创建实现类并添加 `@Singleton` 和 `@Inject`
+3. **配置绑定**：在 `AppModule` 中添加绑定
+4. **注入使用**：在需要的地方通过构造函数注入
+
+## 🛣️ 路由系统（注解驱动）
+
+### 路由注解系统
+| 注解 | 用途 | 示例 |
+|------|------|------|
+| `@RestController` | 标记REST控制器 | `@RestController` |
+| `@RequestMapping` | 定义基础路径 | `@RequestMapping("/api/users")` |
+| `@GetMapping` | GET请求映射 | `@GetMapping("/:id")` |
+| `@PostMapping` | POST请求映射 | `@PostMapping("")` |
+| `@PathParam` | 路径参数 | `@PathParam("id") String id` |
+| `@QueryParam` | 查询参数 | `@QueryParam("name") String name` |
+| `@RequestBody` | 请求体 | `@RequestBody User user` |
+| `@Valid` | 参数校验 | `@Valid @RequestBody CreateUserRequest request` |
+
+### 路由处理流程
+```
+HTTP请求 → AnnotationRouterHandler → 参数解析 → 控制器方法 → ResponseHandler → HTTP响应
+```
+
+### 控制器标准模板
+```java
+@RestController
+@RequestMapping("/api/users")
+@Singleton
+public class UserController {
+
+    private final UserService userService;
+
+    @Inject
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("")
+    public List<User> getUsers(
+        @QueryParam("page") Integer page,
+        @QueryParam("size") Integer size) {
+        return Future.await(userService.getUsers(page, size));
+    }
+
+    @GetMapping("/:id")
+    public User getUserById(@PathParam("id") String id) {
+        return Future.await(userService.getUserById(id));
+    }
+
+    @PostMapping("")
+    public User createUser(@Valid @RequestBody CreateUserRequest request) {
+        return Future.await(userService.createUser(request));
+    }
+
+    @PutMapping("/:id")
+    public User updateUser(
+        @PathParam("id") String id,
+        @Valid @RequestBody UpdateUserRequest request) {
+        return Future.await(userService.updateUser(id, request));
+    }
+
+    @DeleteMapping("/:id")
+    public void deleteUser(@PathParam("id") String id) {
+        Future.await(userService.deleteUser(id));
+    }
+}
+```
+
+## 🔐 认证与授权系统
+
+### 认证注解
+| 注解 | 用途 | 示例 |
+|------|------|------|
+| `@RequireAuth` | 标记需要认证的接口 | `@RequireAuth(AuthType.JWT)` |
+
+### 认证类型
+| 类型 | 说明 | 使用场景 |
+|------|------|----------|
+| `JWT` | JWT令牌认证 | 标准API认证（默认） |
+| `BASIC` | 基础认证 | 简单的用户名密码认证 |
+| `NONE` | 无需认证 | 公开接口 |
+
+### 认证配置示例
+```java
+// 类级别认证 - 所有方法都需要JWT认证
+@RestController
+@RequestMapping("/api/admin")
+@RequireAuth(AuthType.JWT)
+public class AdminController {
+    // 所有方法都需要JWT认证
+}
+
+// 方法级别认证 - 覆盖类级别配置
+@RestController
+@RequestMapping("/api/public")
+@RequireAuth(AuthType.NONE)
+public class PublicController {
+
+    @GetMapping("/info")
+    public String getInfo() {
+        return "公开信息";
+    }
+
+    @PostMapping("/sensitive")
+    @RequireAuth(AuthType.JWT)
+    public String getSensitiveData() {
+        return "敏感数据";
+    }
+}
+```
+
+## ⚡ 限流系统
+
+### 限流注解配置
+```java
+@RestController
+@RequestMapping("/api/users")
+@RateLimit(limit = 1000, window = 3600) // 类级别：每小时1000次
+public class UserController {
+
+    @GetMapping("")
+    public List<User> getUsers() {
+        // 继承类级别限流
+        return userService.getUsers();
+    }
+
+    @PostMapping("")
+    @RateLimit(
+        limit = 10,
+        window = 60,
+        dimension = RateLimitDimension.USER,
+        message = "创建用户过于频繁，请稍后再试"
+    )
+    public User createUser(@RequestBody User user) {
+        // 方法级别限流：每分钟10次，按用户限流
+        return userService.createUser(user);
+    }
+}
+```
+
+### 限流算法类型
+| 类型 | 说明 | 适用场景 |
+|------|------|----------|
+| `FIXED_WINDOW` | 固定窗口算法 | 简单限流场景 |
+| `SLIDING_WINDOW` | 滑动窗口算法 | 精确限流场景 |
+| `TOKEN_BUCKET` | 令牌桶算法 | 允许突发流量 |
+| `LEAKY_BUCKET` | 漏桶算法 | 平滑限流 |
+
+## ⚙️ 配置管理系统
+
+### YAML配置结构
+```yaml
+# config.yml
+server:
+  port: 8888
+  host: localhost
+
+logging:
+  enabled: true
+  level: INFO
+  request_log: true
+
+cors:
+  enabled: true
+  allowed_origins: "*"
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  database: vertx_template
+```
+
+### 配置加载和使用
+```java
+// 配置加载
+JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
+
+// 配置使用
+JsonObject serverConfig = config.getJsonObject("server", new JsonObject());
+int port = serverConfig.getInteger("port", 8888);
+String host = serverConfig.getString("host", "localhost");
+
+// 获取嵌套配置
+JsonObject corsConfig = config.getJsonObject("cors", new JsonObject());
+boolean corsEnabled = corsConfig.getBoolean("enabled", true);
+```
+
+### 配置优先级
+1. **系统属性**（`-D`参数）- 最高优先级
+2. **环境变量** - 中等优先级
+3. **配置文件**（`config.yml`）- 最低优先级
+
+## 🌐 中间件系统
+
+### 全局中间件
+```java
+@Singleton
+public class GlobalMiddleware {
+
+    @Inject
+    public GlobalMiddleware(Vertx vertx, Router router, JsonObject config) {
+        this.vertx = vertx;
+        this.router = router;
+        this.config = config;
+    }
+
+    public void setupMiddleware() {
+        // CORS中间件
+        setupCors();
+
+        // 请求体解析中间件
+        router.route().handler(BodyHandler.create());
+
+        // 请求日志中间件
+        setupRequestLogging();
+
+        // 认证中间件
+        setupAuthentication();
+
+        // 限流中间件
+        setupRateLimit();
+    }
+}
+```
+
+### 中间件执行顺序
+```
+请求 → CORS → 请求体解析 → 请求日志 → 认证 → 限流 → 控制器 → 响应处理 → 响应
+```
+
+## 📊 应用启动流程
+
+### 标准启动序列
+```java
+// Run.java - 应用入口
+public class Run {
+    public static void main(String[] args) {
+        // 1. 创建Vertx实例
+        Vertx vertx = Vertx.vertx(new VertxOptions()
+            .setEventLoopPoolSize(1)
+            .setWorkerPoolSize(1));
+
+        // 2. 使用虚拟线程部署MainVerticle
+        Thread.startVirtualThread(() -> {
+            try {
+                Future.await(vertx.deployVerticle(new MainVerticle()));
+                log.info("应用启动成功");
+            } catch (Exception e) {
+                log.error("应用启动失败", e);
+                System.exit(1);
+            }
+        });
+    }
+}
+
+// MainVerticle.java - 主Verticle
+public class MainVerticle extends AbstractVerticle {
+    @Override
+    public Future<Void> start() {
+        return ConfigLoader.loadConfig(vertx)
+            .compose(this::setupDependencyInjection)
+            .compose(this::setupRouterAndMiddleware)
+            .compose(this::startHttpServer)
+            .compose(result -> {
+                log.info("HTTP服务器启动成功，端口: {}", getPort());
+                return Future.succeededFuture();
+            });
+    }
+}
+```
+
+## 📋 架构设计原则
+
+### SOLID原则应用
+- **单一职责原则**：每个类只负责一个功能领域
+- **开闭原则**：通过接口和依赖注入支持扩展
+- **里氏替换原则**：接口和实现类可以互相替换
+- **接口隔离原则**：接口设计精简，避免臃肿
+- **依赖倒置原则**：依赖抽象而非具体实现
+
+### 架构质量要求
+- **可测试性**：所有组件都支持单元测试
+- **可维护性**：代码结构清晰，职责分离
+- **可扩展性**：通过接口和注解支持功能扩展
+- **性能优化**：充分利用异步和虚拟线程特性
+- **安全性**：内置认证、授权和限流机制
+
+### 最佳实践总结
+1. **遵循分层架构**：严格按照MVC模式组织代码
+2. **使用依赖注入**：通过Guice管理组件依赖关系
+3. **注解驱动开发**：使用注解简化路由和配置
+4. **异步编程模式**：充分利用Vert.x异步特性
+5. **统一异常处理**：全局异常处理和响应包装
+6. **配置外部化**：通过YAML文件管理配置
+7. **中间件模块化**：可插拔的中间件架构
+8. **代码质量保证**：自动化测试和代码审查

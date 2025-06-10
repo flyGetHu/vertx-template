@@ -1,6 +1,6 @@
 ---
 description:
-globs:
+globs: *.java
 alwaysApply: false
 ---
 ---
@@ -10,87 +10,341 @@ auto_attachments:
   - "pom.xml"
 ---
 
-# Vert.x 项目编码规范
+# Vert.x 项目编码标准
 
-本规范定义了项目的Java代码风格、结构和最佳实践。
+## 📋 核心编码原则
 
-## 变量声明规则
+### 变量声明规范（遵循阿里巴巴规范）
+- **默认使用 `final`**：所有变量默认声明为 `final`
+- **命名约定**：
+  - 局部变量：小驼峰（`userId`, `productName`）
+  - 常量：全大写+下划线（`MAX_RETRY_COUNT`）
+  - 成员变量：小驼峰，无前缀（`userService`）
+  - 类名：大驼峰（`UserController`, `ApiResponse`）
+- **集合类型**：优先使用不可变集合 `List.of()`, `Set.of()`, `Map.of()`
 
-### 变量不可变性
-- 所有变量默认声明为 `final`，例如：`final String id = "123";`
-- 只有在确实需要修改变量值时才省略 `final`
-- 示例见 [CodeStyleExample.java](mdc:src/main/java/com/vertx/template/examples/CodeStyleExample.java)
+```java
+// ✅ 推荐
+final String userId = "123";
+final List<String> names = List.of("Alice", "Bob");
+final Map<String, Object> config = Map.of("port", 8080);
 
-### 集合类型
-- 优先使用不可变集合：`List.of()`, `Set.of()`, `Map.of()`
-- 需要可修改的集合时使用线程安全实现：`ConcurrentHashMap`, `CopyOnWriteArrayList`
+// ❌ 避免
+String userId = "123";  // 缺少final
+ArrayList<String> names = new ArrayList<>();  // 非线程安全
+```
+
+### 方法设计规范
+- **行数限制**：方法最大30行
+- **参数限制**：最多3个参数，超过使用DTO对象
+- **单一职责**：一个方法只做一件事
+- **异步方法**：使用 `Future.await()` 处理异步操作
+
+```java
+// ✅ 推荐
+public User getUserById(final String id) {
+    return Future.await(userRepository.findById(id));
+}
+
+// ❌ 避免：返回 Future
+public Future<User> getUserById(String id) {
+    return userRepository.findById(id);
+}
+```
+
+## 🧵 JDK21虚拟线程使用规范
+
+### 核心原则
+- **禁止返回Future**：所有方法直接返回具体类型
+- **使用Future.await()**：在方法内部处理异步操作
+- **异常直接抛出**：不要将异常包装在Future中
+
+### 标准模式
+```java
+// 控制器层
+@GetMapping("/users/:id")
+public User getUserById(@PathParam("id") String id) {
+    return Future.await(userService.getUserById(id));
+}
+
+// 服务层
+public List<User> getActiveUsers() {
+    final List<User> users = Future.await(userRepository.findAll());
+    return users.stream()
+        .filter(User::isActive)
+        .collect(Collectors.toList());
+}
+
+// 异常处理
+public void processOrder(String orderId) {
+    try {
+        final Order order = Future.await(orderService.getOrder(orderId));
+        Future.await(paymentService.processPayment(order));
+    } catch (OrderNotFoundException e) {
+        log.error("订单不存在: {}", orderId);
+        throw e;
+    }
+}
+```
+
+## 🗄️ 数据库实体映射规范
+
+### 类型映射表
+| MySQL类型 | Java类型 | Row获取方法 | 示例 |
+|-----------|----------|-------------|------|
+| BIGINT | Long | `getLong()` | `row.getLong("id")` |
+| VARCHAR | String | `getString()` | `row.getString("username")` |
+| DATETIME | LocalDateTime | `getLocalDateTime()` | `row.getLocalDateTime("created_at")` |
+| DECIMAL | BigDecimal | `getBigDecimal()` | `row.getBigDecimal("price")` |
+| BOOLEAN | Boolean | `getBoolean()` | `row.getBoolean("active")` |
+| JSON | JsonObject | `getJson()` | `row.getJson("metadata")` |
+
+### 实体类标准结构
+```java
+@Data
+@Table("users")
+public class User extends BaseEntity {
+    @Id
+    private Long id;
+
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 50)
+    private String username;
+
+    @Email(message = "邮箱格式不正确")
+    private String email;
+
+    @Column(value = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    // 必需的fromRow方法
+    public static User fromRow(Row row) {
+        if (row == null) return null;
+
+        final User user = new User();
+        user.setId(row.getLong("id"));
+        user.setUsername(row.getString("username"));
+        user.setEmail(row.getString("email"));
+        user.setCreatedAt(row.getLocalDateTime("created_at"));
+        return user;
+    }
+}
+```
 
 ### 命名约定
-- 局部变量：驼峰式，如 `userId`, `productName`
-- 常量：全大写+下划线，如 `MAX_RETRY_COUNT`
-- 成员变量：不使用前缀，直接驼峰式
+- **数据库字段**：下划线分隔（`created_at`, `user_name`）
+- **Java字段**：驼峰命名（`createdAt`, `userName`）
+- **自动映射**：简单字段无需注解，复杂情况使用 `@Column`
 
-## 方法设计规范
+## 📡 API响应处理规范
 
-### 方法设计原则
-- 方法应当短小精悍，最大行数控制在30行以内
-- 单一职责原则：一个方法只做一件事
-- 参数数量控制在3个以内，超过时使用DTO对象
+### 统一响应格式
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { /* 业务数据 */ },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
 
-### 异步方法规范
-- 返回 `Future<T>` 而非使用回调
-- 使用 `Promise` 创建 `Future`
-- 参考 [AnnotationRouterHandler.java](mdc:src/main/java/com/vertx/template/router/handler/AnnotationRouterHandler.java) 中的异步处理模式
+### 控制器标准写法
+```java
+@RestController
+@RequestMapping("/api/users")
+@Singleton
+public class UserController {
 
-## 异常处理
+    @Inject
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
-### 异常基类
-- 业务异常统一继承 [BusinessException](mdc:src/main/java/com/vertx/template/exception/BusinessException.java)
-- 校验异常使用 [ValidationException](mdc:src/main/java/com/vertx/template/exception/ValidationException.java)
+    @GetMapping("/:id")
+    public User getUserById(@PathParam("id") String id) {
+        // 直接返回业务数据，自动包装为标准响应
+        return Future.await(userService.getUserById(id));
+    }
 
-### 异常处理原则
-- 不要捕获后不处理异常（避免空catch块）
-- 异常处理集中在 [ResponseHandler](mdc:src/main/java/com/vertx/template/handler/ResponseHandler.java)
-- 错误信息统一格式化并返回，客户端得到一致的错误响应
+    @PostMapping("")
+    public User createUser(@Valid @RequestBody CreateUserRequest request) {
+        return Future.await(userService.createUser(request));
+    }
+}
+```
 
-## 路由与控制器规范
+### 异常处理
+```java
+// 业务异常
+if (StringUtils.isBlank(id)) {
+    throw new ValidationException("用户ID不能为空");
+}
 
-### 路由定义
-- 使用注解定义路由，如 `@RestController`, `@GetMapping`
-- 路由分组参考 [RouterRegistry](mdc:src/main/java/com/vertx/template/router/RouterRegistry.java)
-- 参数注解：`@PathParam`, `@QueryParam`, `@RequestBody` 等
+// 自定义异常
+public class UserNotFoundException extends BusinessException {
+    public UserNotFoundException(String userId) {
+        super(404, "用户不存在: " + userId);
+    }
+}
+```
 
-### 控制器设计
-- 控制器使用 `@RestController` 和 `@Singleton` 注解
-- 依赖注入使用 `@Inject`
-- 参考 [ProductController](mdc:src/main/java/com/vertx/template/controller/ProductController.java)
+## ✅ 参数验证规范
 
-## 响应式编程规范
+### Bean Validation注解
+```java
+public class CreateUserRequest {
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 20, message = "用户名长度必须在3-20之间")
+    private String username;
 
-### Vert.x Best Practices
-- 避免阻塞操作，必要时使用 `vertx.executeBlocking()`
-- 利用 `Future` 的组合功能：`compose()`, `map()`, `flatMap()`
-- 避免嵌套 Future 回调，优先使用链式调用
+    @Email(message = "邮箱格式不正确")
+    @NotBlank(message = "邮箱不能为空")
+    private String email;
 
-### 事件循环保护
-- 长时间操作必须放在专门的工作线程执行
-- 不要在事件循环中使用阻塞I/O或CPU密集型计算
+    @Min(value = 18, message = "年龄不能小于18岁")
+    private Integer age;
+}
+```
 
-## 数据校验
+### 路由注解使用
+```java
+@GetMapping("/users")
+public List<User> getUsers(
+    @QueryParam("page") Integer page,
+    @QueryParam("size") Integer size) {
+    // 查询参数自动解析和类型转换
+}
 
-### Bean Validation
-- 实体类使用Jakarta Bean Validation注解
-- 示例参考 [Product](mdc:src/main/java/com/vertx/template/model/Product.java)
-- 校验执行由 [ValidationUtils](mdc:src/main/java/com/vertx/template/router/validation/ValidationUtils.java) 统一处理
+@PostMapping("/users")
+public User createUser(@Valid @RequestBody CreateUserRequest request) {
+    // 自动验证请求体
+}
+```
 
-## 日志规范
+## 🔧 代码风格工具
+
+### Spotless配置
+- **格式化命令**：`mvn spotless:apply`
+- **检查命令**：`mvn spotless:check`
+- **Git Hook**：提交前自动格式化
+- **IDE集成**：保存时自动格式化
+
+### 提交消息规范
+格式：`类型(范围): 描述`
+
+**支持的类型**：
+- `feat`: 新功能
+- `fix`: 修复Bug
+- `docs`: 文档变更
+- `style`: 代码风格调整
+- `refactor`: 代码重构
+- `test`: 测试相关
+- `chore`: 构建工具变更
+
+**示例**：
+```
+feat(user): 添加用户登录功能
+fix(auth): 修复token过期判断逻辑
+docs(api): 更新API文档
+```
+
+## 📝 日志记录规范
 
 ### 日志级别使用
-- ERROR: 影响系统运行的错误
-- WARN: 不影响系统但需要关注的异常情况
-- INFO: 重要业务事件和状态变化
-- DEBUG: 调试信息，生产环境通常不开启
+| 级别 | 用途 | 示例场景 |
+|------|------|----------|
+| ERROR | 系统错误 | 数据库连接失败、未捕获异常 |
+| WARN | 警告信息 | 配置缺失、性能警告 |
+| INFO | 重要业务信息 | 用户登录、订单创建 |
+| DEBUG | 调试信息 | 方法调用、参数值 |
 
-### 日志内容
-- 包含关键标识信息如用户ID、请求ID
-- 敏感信息（如密码、令牌）必须脱敏后记录
+### 日志记录示例
+```java
+@Slf4j
+public class UserService {
+    public User createUser(CreateUserRequest request) {
+        log.info("Creating user with username: {}", request.getUsername());
+
+        try {
+            User user = Future.await(userRepository.save(request.toUser()));
+            log.info("User created successfully with ID: {}", user.getId());
+            return user;
+        } catch (Exception e) {
+            log.error("Failed to create user: {}", request.getUsername(), e);
+            throw e;
+        }
+    }
+}
+```
+
+### 敏感信息处理
+```java
+// ❌ 避免：记录敏感信息
+log.info("User login: username={}, password={}", username, password);
+
+// ✅ 推荐：脱敏处理
+log.info("User login: username={}, password=***", username);
+```
+
+## 🚨 异常处理最佳实践
+
+### 异常分层
+```java
+// 系统异常 - 技术错误，返回500
+public class SystemException extends RuntimeException {
+    public SystemException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+// 业务异常 - 业务逻辑错误，返回400-499
+public class BusinessException extends RuntimeException {
+    private final int code;
+
+    public BusinessException(int code, String message) {
+        super(message);
+        this.code = code;
+    }
+}
+
+// 验证异常 - 参数验证失败，返回400
+public class ValidationException extends BusinessException {
+    public ValidationException(String message) {
+        super(400, message);
+    }
+}
+```
+
+### 异常使用示例
+```java
+public User getUserById(String id) {
+    if (StringUtils.isBlank(id)) {
+        throw new ValidationException("用户ID不能为空");
+    }
+
+    User user = Future.await(userRepository.findById(id));
+    if (user == null) {
+        throw new BusinessException(404, "用户不存在: " + id);
+    }
+
+    return user;
+}
+```
+
+## 📋 代码审查清单
+
+### 必须检查项
+- [ ] 所有变量是否使用 `final` 声明
+- [ ] 方法是否直接返回具体类型（非Future）
+- [ ] 是否正确使用 `Future.await()`
+- [ ] 实体类是否包含 `fromRow` 方法
+- [ ] 是否添加必要的验证注解
+- [ ] 异常处理是否规范
+- [ ] 日志记录是否完整且不包含敏感信息
+- [ ] 提交消息是否符合规范
+
+### 性能检查项
+- [ ] 是否避免在循环中进行数据库查询
+- [ ] 是否使用合适的集合类型
+- [ ] 是否正确处理大数据量操作
+- [ ] 是否避免不必要的对象创建
