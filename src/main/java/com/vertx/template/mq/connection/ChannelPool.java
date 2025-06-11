@@ -1,232 +1,334 @@
 package com.vertx.template.mq.connection;
 
+import com.vertx.template.mq.config.ChannelPoolConfig;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.rabbitmq.RabbitMQClient;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
-/** RabbitMQ通道池 维护发送消息用的RabbitMQClient池，支持客户端的借用和归还 */
+/**
+ * 简化的RabbitMQ连接池
+ *
+ * 核心功能：
+ * - 连接池管理（借用/归还）
+ * - 基本的连接验证
+ * - 线程安全操作
+ * - 优雅关闭
+ */
 @Slf4j
 @Singleton
 public class ChannelPool {
 
-  /** 默认池大小 */
-  private static final int DEFAULT_POOL_SIZE = 10;
-
-  /** 默认最大池大小 */
-  private static final int DEFAULT_MAX_POOL_SIZE = 50;
-
   private final Vertx vertx;
   private final RabbitMqConnectionManager connectionManager;
+  private final ChannelPoolConfig config;
+
+  // 连接池状态
   private final AtomicBoolean initialized = new AtomicBoolean(false);
-  private final AtomicInteger currentPoolSize = new AtomicInteger(0);
+  private final AtomicBoolean shutdown = new AtomicBoolean(false);
+  private final AtomicInteger totalConnections = new AtomicInteger(0);
 
-  private BlockingQueue<RabbitMQClient> availableClients;
-  private int poolSize = DEFAULT_POOL_SIZE;
-  private int maxPoolSize = DEFAULT_MAX_POOL_SIZE;
+  // 连接存储 - 使用简单的队列
+  private final ConcurrentLinkedQueue<RabbitMQClient> availableClients = new ConcurrentLinkedQueue<>();
 
-  /**
-   * 构造器
-   *
-   * @param vertx Vert.x实例
-   * @param connectionManager 连接管理器
-   */
+  // 清理任务ID
+  private Long cleanupTimerId;
+
   @Inject
-  public ChannelPool(Vertx vertx, RabbitMqConnectionManager connectionManager) {
+  public ChannelPool(final Vertx vertx, final RabbitMqConnectionManager connectionManager,
+      final ChannelPoolConfig config) {
     this.vertx = vertx;
     this.connectionManager = connectionManager;
-  }
-
-  /** 初始化通道池 */
-  public void initialize() {
-    initialize(DEFAULT_POOL_SIZE, DEFAULT_MAX_POOL_SIZE);
+    this.config = config;
   }
 
   /**
-   * 初始化通道池
-   *
-   * @param poolSize 初始池大小
-   * @param maxPoolSize 最大池大小
+   * 初始化连接池
    */
-  public void initialize(int poolSize, int maxPoolSize) {
-    if (initialized.get()) {
+  public void initialize() {
+    if (!initialized.compareAndSet(false, true)) {
+      log.warn("连接池已经初始化，跳过重复初始化");
       return;
     }
 
-    this.poolSize = poolSize;
-    this.maxPoolSize = maxPoolSize;
-    this.availableClients = new LinkedBlockingQueue<>(maxPoolSize);
+    if (!config.isValid()) {
+      throw new IllegalArgumentException("连接池配置无效: " + config);
+    }
 
-    log.info("正在初始化通道池，初始大小: {}，最大大小: {}", poolSize, maxPoolSize);
+    log.info("初始化连接池 - 初始大小: {}, 最大大小: {}", config.getInitialSize(), config.getMaxSize());
 
     try {
-      // 预创建客户端
-      for (int i = 0; i < poolSize; i++) {
-        final RabbitMQClient client = createClient();
-        if (client != null) {
-          availableClients.offer(client);
-          currentPoolSize.incrementAndGet();
-        }
-      }
+      // 预创建初始连接
+      createInitialConnections();
 
-      initialized.set(true);
-      log.info("通道池初始化完成，当前池大小: {}", currentPoolSize.get());
-    } catch (Exception cause) {
-      log.error("通道池初始化失败", cause);
-      throw new RuntimeException("通道池初始化失败", cause);
+      // 启动定期清理任务
+      startCleanupTask();
+
+      log.info("连接池初始化完成 - 总连接数: {}, 可用连接: {}",
+          totalConnections.get(), availableClients.size());
+    } catch (Exception e) {
+      initialized.set(false);
+      log.error("连接池初始化失败", e);
+      throw new RuntimeException("连接池初始化失败", e);
     }
   }
 
   /**
-   * 从池中获取客户端
-   *
-   * @return 客户端实例
+   * 借用客户端
    */
   public RabbitMQClient borrowClient() {
-    if (!initialized.get()) {
-      throw new IllegalStateException("通道池尚未初始化");
-    }
+    checkState();
 
-    final RabbitMQClient client = availableClients.poll();
-
-    if (client == null || !client.isConnected()) {
-      // 池中没有可用客户端或客户端已断连，创建新客户端
-      if (currentPoolSize.get() < maxPoolSize) {
-        final RabbitMQClient newClient = createClient();
-        if (newClient != null) {
-          currentPoolSize.incrementAndGet();
-          log.debug("创建新客户端，当前池大小: {}", currentPoolSize.get());
-
-          try {
-            // 启动新客户端
-            Future.await(newClient.start());
-            return newClient;
-          } catch (Exception cause) {
-            log.error("启动新客户端失败", cause);
-            currentPoolSize.decrementAndGet();
-            throw new RuntimeException("启动新客户端失败", cause);
-          }
-        }
-      } else {
-        throw new RuntimeException("通道池已满，无法创建新客户端");
-      }
-    }
-
-    if (client != null && client.isConnected()) {
-      log.debug("成功获取客户端");
+    // 尝试从池中获取可用连接
+    RabbitMQClient client = getHealthyClient();
+    if (client != null) {
       return client;
-    } else {
-      throw new RuntimeException("无法获取有效客户端");
     }
+
+    // 池中没有可用连接，尝试创建新连接
+    client = createNewClient();
+    if (client != null) {
+      return client;
+    }
+
+    throw new RuntimeException("无法获取连接：连接池已满且无法创建新连接");
   }
 
   /**
-   * 归还客户端到池中
-   *
-   * @param client 要归还的客户端
+   * 归还客户端
    */
-  public void returnClient(RabbitMQClient client) {
-    if (!initialized.get()) {
-      throw new IllegalStateException("通道池尚未初始化");
+  public void returnClient(final RabbitMQClient client) {
+    if (!initialized.get() || client == null) {
+      closeClientSafely(client);
+      return;
     }
 
-    try {
-      if (client != null && client.isConnected()) {
-        final boolean offered = availableClients.offer(client);
-        if (offered) {
-          log.debug("客户端归还成功");
-        } else {
-          // 池已满，关闭客户端
-          Future.await(client.stop());
-          currentPoolSize.decrementAndGet();
-          log.debug("池已满，关闭客户端，当前池大小: {}", currentPoolSize.get());
-        }
-      } else {
-        // 客户端已关闭，减少计数
-        if (client != null) {
-          currentPoolSize.decrementAndGet();
-          log.debug("归还的客户端已关闭，当前池大小: {}", currentPoolSize.get());
-        }
-      }
-    } catch (Exception cause) {
-      log.error("归还客户端失败", cause);
-      throw new RuntimeException("归还客户端失败", cause);
-    }
-  }
-
-  /** 关闭通道池 */
-  public void close() {
-    log.info("正在关闭通道池...");
-
-    try {
-      // 关闭所有客户端
-      RabbitMQClient client;
-      while ((client = availableClients.poll()) != null) {
-        try {
-          if (client.isConnected()) {
-            Future.await(client.stop()); // 同步关闭
-          }
-        } catch (Exception e) {
-          log.warn("关闭客户端时发生异常: {}", e.getMessage());
-        }
-      }
-
-      currentPoolSize.set(0);
-      initialized.set(false);
-      log.info("通道池已关闭");
-
-    } catch (Exception e) {
-      log.error("关闭通道池失败", e);
-      throw new RuntimeException("关闭通道池失败", e);
+    // 检查连接是否仍然有效
+    if (isClientValid(client)) {
+      availableClients.offer(client);
+      log.debug("客户端归还成功");
+    } else {
+      closeClientAndDecrement(client);
+      log.debug("归还的客户端无效，已关闭");
     }
   }
 
   /**
-   * 获取池状态信息
-   *
-   * @return 池状态字符串
+   * 优雅关闭
+   */
+  public void shutdown() {
+    if (!shutdown.compareAndSet(false, true)) {
+      return;
+    }
+
+    log.info("开始关闭连接池");
+
+    try {
+      // 停止清理任务
+      if (cleanupTimerId != null) {
+        vertx.cancelTimer(cleanupTimerId);
+      }
+
+      // 关闭所有连接
+      closeAllConnections();
+
+      // 清理状态
+      availableClients.clear();
+      totalConnections.set(0);
+
+      log.info("连接池已关闭");
+    } catch (Exception e) {
+      log.error("关闭连接池失败", e);
+    } finally {
+      initialized.set(false);
+    }
+  }
+
+  /**
+   * 获取池状态
    */
   public String getPoolStats() {
-    return String.format(
-        "通道池状态 - 可用: %d, 总计: %d, 最大: %d",
-        availableClients.size(), currentPoolSize.get(), maxPoolSize);
+    return String.format("连接池状态 - 可用: %d, 总计: %d, 最大: %d, 已初始化: %s",
+        availableClients.size(), totalConnections.get(), config.getMaxSize(), initialized.get());
   }
 
   /**
-   * 获取可用客户端数量
-   *
-   * @return 可用客户端数量
+   * 获取可用连接数
    */
-  public int getAvailableClientCount() {
+  public int getAvailableCount() {
     return availableClients.size();
   }
 
   /**
-   * 获取当前池大小
-   *
-   * @return 当前池大小
+   * 获取总连接数
    */
-  public int getCurrentPoolSize() {
-    return currentPoolSize.get();
+  public int getTotalConnections() {
+    return totalConnections.get();
+  }
+
+  // ================================
+  // 私有方法
+  // ================================
+
+  private void checkState() {
+    if (!initialized.get()) {
+      throw new IllegalStateException("连接池尚未初始化");
+    }
+    if (shutdown.get()) {
+      throw new IllegalStateException("连接池已关闭");
+    }
   }
 
   /**
-   * 创建新的RabbitMQ客户端
-   *
-   * @return 新的客户端实例
+   * 创建初始连接
    */
-  private RabbitMQClient createClient() {
-    try {
-      return connectionManager.getClient();
-    } catch (Exception e) {
-      log.error("创建客户端失败", e);
+  private void createInitialConnections() {
+    final int initialSize = config.getInitialSize();
+    int created = 0;
+
+    for (int i = 0; i < initialSize; i++) {
+      try {
+        final RabbitMQClient client = connectionManager.getClient();
+        if (client != null) {
+          availableClients.offer(client);
+          totalConnections.incrementAndGet();
+          created++;
+        }
+      } catch (Exception e) {
+        log.warn("创建初始连接失败，索引: {}", i, e);
+      }
+    }
+
+    log.info("创建初始连接完成: {}/{}", created, initialSize);
+  }
+
+  /**
+   * 获取健康的客户端
+   */
+  private RabbitMQClient getHealthyClient() {
+    RabbitMQClient client;
+    while ((client = availableClients.poll()) != null) {
+      if (isClientValid(client)) {
+        return client;
+      } else {
+        // 连接无效，关闭并继续
+        closeClientAndDecrement(client);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 创建新客户端
+   */
+  private RabbitMQClient createNewClient() {
+    final int current = totalConnections.get();
+    if (current >= config.getMaxSize()) {
       return null;
+    }
+
+    try {
+      final RabbitMQClient client = connectionManager.getClient();
+      if (client != null) {
+        totalConnections.incrementAndGet();
+        return client;
+      }
+    } catch (Exception e) {
+      log.error("创建新连接失败", e);
+    }
+
+    return null;
+  }
+
+  /**
+   * 检查客户端是否有效
+   */
+  private boolean isClientValid(final RabbitMQClient client) {
+    return client != null && client.isConnected();
+  }
+
+  /**
+   * 关闭客户端并减少计数
+   */
+  private void closeClientAndDecrement(final RabbitMQClient client) {
+    closeClientSafely(client);
+    totalConnections.decrementAndGet();
+  }
+
+  /**
+   * 安全关闭客户端
+   */
+  private void closeClientSafely(final RabbitMQClient client) {
+    if (client != null) {
+      try {
+        if (client.isConnected()) {
+          Future.await(client.stop());
+        }
+      } catch (Exception e) {
+        log.debug("关闭客户端时发生异常", e);
+      }
+    }
+  }
+
+  /**
+   * 关闭所有连接
+   */
+  private void closeAllConnections() {
+    RabbitMQClient client;
+    while ((client = availableClients.poll()) != null) {
+      closeClientSafely(client);
+    }
+  }
+
+  /**
+   * 启动清理任务
+   */
+  private void startCleanupTask() {
+    // 每分钟检查一次无效连接
+    cleanupTimerId = vertx.setPeriodic(60_000, id -> cleanupInvalidConnections());
+    log.debug("清理任务已启动");
+  }
+
+  /**
+   * 清理无效连接
+   */
+  private void cleanupInvalidConnections() {
+    if (shutdown.get()) {
+      return;
+    }
+
+    try {
+      final int sizeBefore = availableClients.size();
+      int removed = 0;
+
+      // 检查并移除无效连接
+      final int checkCount = Math.min(availableClients.size(), 5); // 每次最多检查5个
+      for (int i = 0; i < checkCount; i++) {
+        final RabbitMQClient client = availableClients.poll();
+        if (client == null) {
+          break;
+        }
+
+        if (isClientValid(client)) {
+          // 连接有效，放回池中
+          availableClients.offer(client);
+        } else {
+          // 连接无效，关闭
+          closeClientAndDecrement(client);
+          removed++;
+        }
+      }
+
+      if (removed > 0) {
+        log.info("清理无效连接: {}, 剩余可用: {}", removed, availableClients.size());
+      }
+    } catch (Exception e) {
+      log.error("清理连接失败", e);
     }
   }
 }

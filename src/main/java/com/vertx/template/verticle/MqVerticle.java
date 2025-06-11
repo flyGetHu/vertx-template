@@ -5,6 +5,7 @@ import com.google.inject.Injector;
 import com.vertx.template.di.AppModule;
 import com.vertx.template.mq.MQManager;
 import com.vertx.template.mq.config.RabbitMqConfig;
+import com.vertx.template.mq.connection.ChannelPool;
 import com.vertx.template.mq.connection.RabbitMqConnectionManager;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -14,7 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 消息队列Verticle 负责MQ连接初始化、消息发送接收基础设施和相关配置
  *
- * <p>主要职责： 1. 验证和加载MQ配置 2. 初始化RabbitMQ连接管理器 3. 自动扫描并启动消费者 4. 管理MQ服务的生命周期
+ * <p>
+ * 主要职责： 1. 验证和加载MQ配置 2. 初始化RabbitMQ连接管理器 3. 自动扫描并启动消费者 4. 管理MQ服务的生命周期
  */
 @Slf4j
 public class MqVerticle extends AbstractVerticle {
@@ -25,6 +27,7 @@ public class MqVerticle extends AbstractVerticle {
   private Injector injector;
   private MQManager mqManager;
   private RabbitMqConnectionManager connectionManager;
+  private ChannelPool channelPool;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -54,7 +57,10 @@ public class MqVerticle extends AbstractVerticle {
       // 4. 初始化连接管理器
       initializeConnectionManager();
 
-      // 5. 启动消费者
+      // 5. 初始化连接池
+      initializeChannelPool();
+
+      // 6. 启动消费者
       startConsumers();
 
       mqEnabled = true;
@@ -82,6 +88,12 @@ public class MqVerticle extends AbstractVerticle {
       if (mqManager != null) {
         mqManager.stopAllConsumers();
         log.info("所有消费者已停止");
+      }
+
+      // 关闭连接池
+      if (channelPool != null) {
+        channelPool.shutdown();
+        log.info("连接池已关闭");
       }
 
       // 清理连接管理器
@@ -143,6 +155,7 @@ public class MqVerticle extends AbstractVerticle {
       injector = Guice.createInjector(new AppModule(vertx, config));
       mqManager = injector.getInstance(MQManager.class);
       connectionManager = injector.getInstance(RabbitMqConnectionManager.class);
+      channelPool = injector.getInstance(ChannelPool.class);
 
       log.info("依赖注入容器初始化完成");
     } catch (Exception e) {
@@ -159,6 +172,18 @@ public class MqVerticle extends AbstractVerticle {
       log.info("RabbitMQ连接管理器初始化完成");
     } catch (Exception e) {
       throw new RuntimeException("初始化RabbitMQ连接管理器失败", e);
+    }
+  }
+
+  /** 初始化连接池 */
+  private void initializeChannelPool() {
+    log.info("初始化连接池...");
+
+    try {
+      channelPool.initialize();
+      log.info("连接池初始化完成 - {}", channelPool.getPoolStats());
+    } catch (Exception e) {
+      throw new RuntimeException("初始化连接池失败", e);
     }
   }
 

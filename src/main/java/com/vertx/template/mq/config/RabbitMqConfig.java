@@ -23,6 +23,15 @@ public class RabbitMqConfig {
   private long networkRecoveryInterval = 5000;
   private boolean automaticRecovery = true;
 
+  /** 连接重试配置 */
+  private int maxRetryAttempts = 10;
+  private long initialRetryDelay = 1000; // 1秒
+  private long maxRetryDelay = 30000; // 30秒
+  private long connectionCheckInterval = 10000; // 10秒
+
+  /** 连接池配置 */
+  private ChannelPoolConfig poolConfig = new ChannelPoolConfig();
+
   public static RabbitMqConfig fromJson(JsonObject json) {
     if (json == null) {
       return new RabbitMqConfig();
@@ -39,7 +48,12 @@ public class RabbitMqConfig {
         .setHandshakeTimeout(json.getInteger("handshakeTimeout", 10000))
         .setRequestedChannelMax(json.getInteger("requestedChannelMax", 5))
         .setNetworkRecoveryInterval(json.getLong("networkRecoveryInterval", 5000L))
-        .setAutomaticRecovery(json.getBoolean("automaticRecovery", true));
+        .setAutomaticRecovery(json.getBoolean("automaticRecovery", true))
+        .setMaxRetryAttempts(json.getInteger("maxRetryAttempts", 10))
+        .setInitialRetryDelay(json.getLong("initialRetryDelay", 1000L))
+        .setMaxRetryDelay(json.getLong("maxRetryDelay", 30000L))
+        .setConnectionCheckInterval(json.getLong("connectionCheckInterval", 10000L))
+        .setPoolConfig(ChannelPoolConfig.fromJson(json.getJsonObject("pool")));
   }
 
   /**

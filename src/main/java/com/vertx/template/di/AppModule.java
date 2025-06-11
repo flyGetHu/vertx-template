@@ -141,8 +141,8 @@ public class AppModule extends AbstractModule {
   @Provides
   @Singleton
   public ChannelPool provideChannelPool(
-      final Vertx vertx, final RabbitMqConnectionManager connectionManager) {
-    return new ChannelPool(vertx, connectionManager);
+      final Vertx vertx, final RabbitMqConnectionManager connectionManager, final RabbitMqConfig rabbitMqConfig) {
+    return new ChannelPool(vertx, connectionManager, rabbitMqConfig.getPoolConfig());
   }
 
   @Provides

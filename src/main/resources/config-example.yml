@@ -1,0 +1,59 @@
+# Vert.x Template 配置示例
+server:
+  port: 8888
+  host: localhost
+
+logging:
+  enabled: true
+  level: INFO
+  request_log: true
+
+cors:
+  enabled: true
+  allowed_origins: "*"
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+
+# MQ配置
+mq:
+  rabbitmq:
+    enabled: true
+    host: localhost
+    port: 5672
+    user: guest
+    password: guest
+    virtualHost: /
+    useSsl: false
+    connectionTimeout: 60000
+    requestedHeartbeat: 60
+    handshakeTimeout: 10000
+    requestedChannelMax: 5
+    networkRecoveryInterval: 5000
+    automaticRecovery: true
+
+    # 连接重试配置
+    maxRetryAttempts: 10
+    initialRetryDelay: 1000
+    maxRetryDelay: 30000
+    connectionCheckInterval: 10000
+
+    # 连接池配置（用于发送消息）
+    pool:
+      initial_size: 5
+      max_size: 20
+      borrow_timeout_ms: 5000
+      health_check_interval_ms: 30000
+      enable_metrics: true
+      idle_timeout_ms: 300000
+      max_create_retries: 3
+
+# 数据库配置示例
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  database: vertx_template

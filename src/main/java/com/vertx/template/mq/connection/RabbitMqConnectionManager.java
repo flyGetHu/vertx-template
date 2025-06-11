@@ -5,63 +5,79 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.rabbitmq.RabbitMQClient;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
-/** RabbitMQ连接管理器 基于Vert.x RabbitMQ客户端，管理连接的创建和维护 */
+/**
+ * 精简的RabbitMQ连接管理器
+ * 支持自动重连、连接健康检查、定时状态打印
+ */
 @Slf4j
 @Singleton
 public class RabbitMqConnectionManager {
 
   private final Vertx vertx;
   private final RabbitMqConfig config;
+
+  // 连接状态
   private final AtomicBoolean initialized = new AtomicBoolean(false);
+  private final AtomicBoolean shutdown = new AtomicBoolean(false);
+  private final AtomicBoolean connecting = new AtomicBoolean(false);
   private volatile RabbitMQClient client;
+
+  // 重连配置
+  private static final int MAX_RETRY_ATTEMPTS = 10;
+  private static final long RECONNECT_INTERVAL = 10000; // 10秒
+  private static final long HEALTH_CHECK_INTERVAL = 10000; // 10秒
+  private static final long STATUS_PRINT_INTERVAL = 30000; // 30秒
+
+  // 重连状态
+  private final AtomicInteger retryCount = new AtomicInteger(0);
+  private Long reconnectTimerId;
+  private Long healthCheckTimerId;
+  private Long statusPrintTimerId;
 
   /**
    * 构造器
    *
-   * @param vertx Vert.x实例
+   * @param vertx  Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
-  public RabbitMqConnectionManager(Vertx vertx, RabbitMqConfig config) {
+  public RabbitMqConnectionManager(final Vertx vertx, final RabbitMqConfig config) {
     this.vertx = vertx;
     this.config = config;
   }
 
   /**
    * 初始化连接管理器
-   *
-   * @return 初始化结果的Future
    */
   public void initialize() {
-    if (initialized.get()) {
+    if (!initialized.compareAndSet(false, true)) {
+      log.warn("连接管理器已经初始化，跳过重复初始化");
       return;
     }
-
-    log.info("正在初始化RabbitMQ连接管理器...");
 
     if (!config.isValid()) {
       throw new IllegalArgumentException("RabbitMQ配置无效");
     }
 
-    try {
-      // 创建RabbitMQ客户端
-      client = RabbitMQClient.create(vertx, config.toVertxOptions());
+    log.info("正在初始化RabbitMQ连接管理器...");
 
-      // 启动客户端连接
-      Future.await(client.start());
-      // 测试连接
-      if (!client.isConnected()) {
-        throw new RuntimeException("RabbitMQ连接失败");
-      }
-      initialized.set(true);
+    try {
+      // 启动初始连接
+      connectToRabbitMQ();
+
+      // 启动定时任务
+      startHealthCheck();
+      startStatusPrinter();
+
       log.info("RabbitMQ连接管理器初始化完成");
     } catch (Exception e) {
-      log.error("创建RabbitMQ客户端失败", e);
-      throw new RuntimeException("创建RabbitMQ客户端失败", e);
+      log.error("RabbitMQ连接管理器初始化失败", e);
+      throw new RuntimeException("连接管理器初始化失败", e);
     }
   }
 
@@ -69,34 +85,24 @@ public class RabbitMqConnectionManager {
    * 获取RabbitMQ客户端
    *
    * @return RabbitMQ客户端对象
+   * @throws IllegalStateException 如果连接不可用
    */
   public RabbitMQClient getClient() {
     if (!initialized.get()) {
       throw new IllegalStateException("连接管理器尚未初始化");
     }
 
-    if (client == null || !client.isConnected()) {
-      throw new IllegalStateException("RabbitMQ连接不可用");
+    if (shutdown.get()) {
+      throw new IllegalStateException("连接管理器已关闭");
     }
-
-    return client;
-  }
-
-  /**
-   * 关闭连接管理器
-   *
-   * @return 关闭结果的Future
-   */
-  public void close() {
-    log.info("正在关闭RabbitMQ连接管理器...");
 
     if (client != null && client.isConnected()) {
-      Future.await(client.stop());
-      initialized.set(false);
-      log.info("RabbitMQ连接已关闭");
-    } else {
-      log.warn("RabbitMQ连接已关闭");
+      return client;
     }
+
+    // 连接不可用时触发重连
+    triggerReconnect();
+    throw new IllegalStateException("RabbitMQ连接不可用，正在尝试重连中...");
   }
 
   /**
@@ -105,19 +111,215 @@ public class RabbitMqConnectionManager {
    * @return 连接是否可用
    */
   public boolean isConnectionAvailable() {
-    return initialized.get() && client != null && client.isConnected();
+    return initialized.get() && !shutdown.get() && client != null && client.isConnected();
   }
 
   /**
-   * 获取连接信息
-   *
-   * @return 连接信息字符串
+   * 关闭连接管理器
    */
-  public String getConnectionInfo() {
+  public void close() {
+    if (!shutdown.compareAndSet(false, true)) {
+      return;
+    }
+
+    log.info("正在关闭RabbitMQ连接管理器...");
+
+    try {
+      // 停止所有定时任务
+      stopTimers();
+
+      // 关闭连接
+      closeConnection();
+
+      initialized.set(false);
+      log.info("RabbitMQ连接管理器已关闭");
+    } catch (Exception e) {
+      log.error("关闭RabbitMQ连接管理器时发生异常", e);
+    }
+  }
+
+  // ================================
+  // 私有方法
+  // ================================
+
+  /**
+   * 连接到RabbitMQ
+   */
+  private void connectToRabbitMQ() {
+    if (shutdown.get() || connecting.get()) {
+      return;
+    }
+
+    connecting.set(true);
+
+    try {
+      log.info("尝试连接到RabbitMQ: {}:{} (第{}次尝试)",
+          config.getHost(), config.getPort(), retryCount.get() + 1);
+
+      // 关闭旧连接
+      closeConnection();
+
+      // 创建新连接
+      client = RabbitMQClient.create(vertx, config.toVertxOptions());
+      Future.await(client.start());
+
+      if (client.isConnected()) {
+        // 连接成功
+        retryCount.set(0);
+        connecting.set(false);
+        log.info("RabbitMQ连接成功: {}:{}", config.getHost(), config.getPort());
+        return;
+      }
+    } catch (Exception e) {
+      log.error("连接RabbitMQ失败: {}:{} - {}", config.getHost(), config.getPort(), e.getMessage());
+    }
+
+    // 连接失败，安排重试
+    connecting.set(false);
+    scheduleReconnect();
+  }
+
+  /**
+   * 安排重连
+   */
+  private void scheduleReconnect() {
+    if (shutdown.get()) {
+      return;
+    }
+
+    final int currentRetry = retryCount.getAndIncrement();
+
+    if (currentRetry >= MAX_RETRY_ATTEMPTS) {
+      log.error("RabbitMQ重连失败，已达到最大重试次数: {}，将在{}ms后重置重试计数",
+          MAX_RETRY_ATTEMPTS, RECONNECT_INTERVAL * 2);
+
+      // 重置重试计数后继续尝试
+      vertx.setTimer(RECONNECT_INTERVAL * 2, id -> {
+        retryCount.set(0);
+        scheduleReconnect();
+      });
+      return;
+    }
+
+    log.debug("将在{}ms后进行第{}次重连尝试", RECONNECT_INTERVAL, currentRetry + 1);
+
+    reconnectTimerId = vertx.setTimer(RECONNECT_INTERVAL, id -> {
+      reconnectTimerId = null;
+      connectToRabbitMQ();
+    });
+  }
+
+  /**
+   * 触发重连
+   */
+  private void triggerReconnect() {
+    if (shutdown.get() || connecting.get()) {
+      return;
+    }
+
+    // 取消已安排的重连任务
+    cancelReconnectTimer();
+
+    // 立即尝试重连
+    vertx.runOnContext(v -> connectToRabbitMQ());
+  }
+
+  /**
+   * 启动连接健康检查
+   */
+  private void startHealthCheck() {
+    healthCheckTimerId = vertx.setPeriodic(HEALTH_CHECK_INTERVAL, id -> {
+      try {
+        if (shutdown.get()) {
+          vertx.cancelTimer(id);
+          return;
+        }
+
+        // 检查连接状态
+        if (client == null || !client.isConnected()) {
+          log.debug("健康检查发现连接断开，触发重连");
+          triggerReconnect();
+        }
+      } catch (Exception e) {
+        log.error("健康检查执行异常", e);
+      }
+    });
+
+    log.debug("连接健康检查已启动，间隔: {}ms", HEALTH_CHECK_INTERVAL);
+  }
+
+  /**
+   * 启动状态打印器
+   */
+  private void startStatusPrinter() {
+    statusPrintTimerId = vertx.setPeriodic(STATUS_PRINT_INTERVAL, id -> {
+      try {
+        if (shutdown.get()) {
+          vertx.cancelTimer(id);
+          return;
+        }
+
+        printConnectionStatus();
+      } catch (Exception e) {
+        log.error("状态打印执行异常", e);
+      }
+    });
+
+    log.debug("连接状态打印器已启动，间隔: {}ms", STATUS_PRINT_INTERVAL);
+  }
+
+  /**
+   * 打印连接状态
+   */
+  private void printConnectionStatus() {
     if (client != null && client.isConnected()) {
-      return String.format("RabbitMQ连接状态: 已连接 - %s:%d", config.getHost(), config.getPort());
+      log.info("RabbitMQ连接状态: 已连接 - {}:{}", config.getHost(), config.getPort());
     } else {
-      return "RabbitMQ连接状态: 未连接";
+      log.warn("RabbitMQ连接状态: 未连接 - {}:{}, 重试次数: {}, 正在连接: {}",
+          config.getHost(), config.getPort(), retryCount.get(), connecting.get());
+    }
+  }
+
+  /**
+   * 关闭连接
+   */
+  private void closeConnection() {
+    if (client != null) {
+      try {
+        Future.await(client.stop());
+        log.debug("RabbitMQ连接已关闭");
+      } catch (Exception e) {
+        log.warn("关闭RabbitMQ连接时发生异常: {}", e.getMessage());
+      } finally {
+        client = null;
+      }
+    }
+  }
+
+  /**
+   * 停止所有定时器
+   */
+  private void stopTimers() {
+    cancelReconnectTimer();
+
+    if (healthCheckTimerId != null) {
+      vertx.cancelTimer(healthCheckTimerId);
+      healthCheckTimerId = null;
+    }
+
+    if (statusPrintTimerId != null) {
+      vertx.cancelTimer(statusPrintTimerId);
+      statusPrintTimerId = null;
+    }
+  }
+
+  /**
+   * 取消重连定时器
+   */
+  private void cancelReconnectTimer() {
+    if (reconnectTimerId != null) {
+      vertx.cancelTimer(reconnectTimerId);
+      reconnectTimerId = null;
     }
   }
 }
