@@ -10,16 +10,19 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 订单状态更新消费者示例
  *
- * <p>
- * 展示不同的消费者配置选项：
+ * <p>展示不同的消费者配置选项：
+ *
  * <ul>
- * <li>高性能场景的配置（高prefetchCount）</li>
- * <li>自动确认模式</li>
- * <li>快速重试策略</li>
- * <li>批量处理逻辑</li>
+ *   <li>高性能场景的配置（高prefetchCount）
+ *   <li>自动确认模式
+ *   <li>快速重试策略
+ *   <li>批量处理逻辑
  * </ul>
  */
-@RabbitConsumer(queueName = "order.status.queue", enabled = true, autoAck = true, // 自动确认，提高性能
+@RabbitConsumer(
+    queueName = "order.status.queue",
+    enabled = true,
+    autoAck = true, // 自动确认，提高性能
     maxRetries = 5, // 更多重试次数
     retryDelayMs = 500, // 快速重试
     prefetchCount = 50, // 高性能场景，预取更多消息
@@ -43,8 +46,7 @@ public class OrderStatusConsumer implements MessageConsumer {
       final String status = orderData.getString("status");
       final String timestamp = orderData.getString("timestamp");
 
-      log.debug("处理订单状态更新: orderId={}, status={}, timestamp={}",
-          orderId, status, timestamp);
+      log.debug("处理订单状态更新: orderId={}, status={}, timestamp={}", orderId, status, timestamp);
 
       // 快速处理订单状态更新
       updateOrderStatus(orderId, status, timestamp);
@@ -67,9 +69,7 @@ public class OrderStatusConsumer implements MessageConsumer {
     log.info("订单状态消费者停止");
   }
 
-  /**
-   * 更新订单状态 - 高性能处理
-   */
+  /** 更新订单状态 - 高性能处理 */
   private void updateOrderStatus(String orderId, String status, String timestamp) {
     // 模拟快速数据库更新
     log.debug("更新订单状态: {} -> {}", orderId, status);

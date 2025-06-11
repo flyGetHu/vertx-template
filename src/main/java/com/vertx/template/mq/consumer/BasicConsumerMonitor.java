@@ -8,35 +8,26 @@ import javax.inject.Singleton;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * 简化的消费者监控器
- * 只保留基本的成功/失败统计
- */
+/** 简化的消费者监控器 只保留基本的成功/失败统计 */
 @Slf4j
 @Singleton
 public class BasicConsumerMonitor {
 
   private final Map<String, ConsumerStats> consumerStats = new ConcurrentHashMap<>();
 
-  /**
-   * 注册消费者到监控系统
-   */
+  /** 注册消费者到监控系统 */
   public void registerConsumer(final String consumerName) {
     consumerStats.putIfAbsent(consumerName, new ConsumerStats(consumerName));
     log.debug("已注册消费者到监控系统: {}", consumerName);
   }
 
-  /**
-   * 从监控系统注销消费者
-   */
+  /** 从监控系统注销消费者 */
   public void unregisterConsumer(final String consumerName) {
     consumerStats.remove(consumerName);
     log.debug("已从监控系统注销消费者: {}", consumerName);
   }
 
-  /**
-   * 记录消息处理成功
-   */
+  /** 记录消息处理成功 */
   public void recordSuccess(final String consumerName, final long processingTimeMs) {
     final ConsumerStats stats = consumerStats.get(consumerName);
     if (stats != null) {
@@ -45,9 +36,7 @@ public class BasicConsumerMonitor {
     }
   }
 
-  /**
-   * 记录消息处理失败
-   */
+  /** 记录消息处理失败 */
   public void recordFailure(final String consumerName, final long processingTimeMs) {
     final ConsumerStats stats = consumerStats.get(consumerName);
     if (stats != null) {
@@ -56,9 +45,7 @@ public class BasicConsumerMonitor {
     }
   }
 
-  /**
-   * 记录重试
-   */
+  /** 记录重试 */
   public void recordRetry(final String consumerName) {
     final ConsumerStats stats = consumerStats.get(consumerName);
     if (stats != null) {
@@ -66,9 +53,7 @@ public class BasicConsumerMonitor {
     }
   }
 
-  /**
-   * 记录重试次数耗尽
-   */
+  /** 记录重试次数耗尽 */
   public void recordRetryExhausted(final String consumerName) {
     final ConsumerStats stats = consumerStats.get(consumerName);
     if (stats != null) {
@@ -76,39 +61,38 @@ public class BasicConsumerMonitor {
     }
   }
 
-  /**
-   * 获取指定消费者的统计信息
-   */
+  /** 获取指定消费者的统计信息 */
   public ConsumerStats getConsumerStats(final String consumerName) {
     return consumerStats.get(consumerName);
   }
 
-  /**
-   * 获取所有消费者的简要统计
-   */
+  /** 获取所有消费者的简要统计 */
   public String getStatsString() {
     if (consumerStats.isEmpty()) {
       return "无活跃消费者";
     }
 
     final StringBuilder sb = new StringBuilder("消费者统计:\n");
-    consumerStats.forEach((name, stats) -> sb.append(String.format("  %s: 成功=%d, 失败=%d, 重试=%d, 成功率=%.1f%%\n",
-        name, stats.getSuccessCount(), stats.getFailureCount(),
-        stats.getRetryCount(), stats.getSuccessRate())));
+    consumerStats.forEach(
+        (name, stats) ->
+            sb.append(
+                String.format(
+                    "  %s: 成功=%d, 失败=%d, 重试=%d, 成功率=%.1f%%\n",
+                    name,
+                    stats.getSuccessCount(),
+                    stats.getFailureCount(),
+                    stats.getRetryCount(),
+                    stats.getSuccessRate())));
 
     return sb.toString();
   }
 
-  /**
-   * 获取活跃消费者数量
-   */
+  /** 获取活跃消费者数量 */
   public int getActiveConsumerCount() {
     return consumerStats.size();
   }
 
-  /**
-   * 简化的消费者统计信息
-   */
+  /** 简化的消费者统计信息 */
   @Data
   public static class ConsumerStats {
     private final String consumerName;

@@ -25,6 +25,7 @@ public class RabbitMqConfig {
 
   /** 连接重试配置 */
   private int maxRetryAttempts = 10;
+
   private long initialRetryDelay = 1000; // 1秒
   private long maxRetryDelay = 30000; // 30秒
   private long connectionCheckInterval = 10000; // 10秒

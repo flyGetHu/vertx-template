@@ -9,14 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 消息生产者使用示例
  *
- * <p>
- * 展示如何使用MQManager发送各种类型的消息：
+ * <p>展示如何使用MQManager发送各种类型的消息：
+ *
  * <ul>
- * <li>发送简单文本消息到队列</li>
- * <li>发送JSON消息到队列</li>
- * <li>发送消息到交换机</li>
- * <li>发送带属性的消息</li>
- * <li>批量发送消息</li>
+ *   <li>发送简单文本消息到队列
+ *   <li>发送JSON消息到队列
+ *   <li>发送消息到交换机
+ *   <li>发送带属性的消息
+ *   <li>批量发送消息
  * </ul>
  */
 @Singleton
@@ -30,17 +30,16 @@ public class MessageProducerExample {
     this.mqManager = mqManager;
   }
 
-  /**
-   * 发送用户创建事件
-   */
+  /** 发送用户创建事件 */
   public void sendUserCreatedEvent(String userId, String username, String email) {
     try {
-      final JsonObject userData = new JsonObject()
-          .put("userId", userId)
-          .put("username", username)
-          .put("email", email)
-          .put("timestamp", System.currentTimeMillis())
-          .put("eventType", "USER_CREATED");
+      final JsonObject userData =
+          new JsonObject()
+              .put("userId", userId)
+              .put("username", username)
+              .put("email", email)
+              .put("timestamp", System.currentTimeMillis())
+              .put("eventType", "USER_CREATED");
 
       // 发送JSON消息到队列
       mqManager.sendJsonToQueue("user.created.queue", userData);
@@ -53,15 +52,14 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 发送订单状态更新事件
-   */
+  /** 发送订单状态更新事件 */
   public void sendOrderStatusUpdate(String orderId, String status) {
     try {
-      final JsonObject orderData = new JsonObject()
-          .put("orderId", orderId)
-          .put("status", status)
-          .put("timestamp", System.currentTimeMillis());
+      final JsonObject orderData =
+          new JsonObject()
+              .put("orderId", orderId)
+              .put("status", status)
+              .put("timestamp", System.currentTimeMillis());
 
       // 发送到队列
       mqManager.sendJsonToQueue("order.status.queue", orderData);
@@ -74,16 +72,15 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 发送通知消息到交换机
-   */
+  /** 发送通知消息到交换机 */
   public void sendNotification(String userId, String message, String type) {
     try {
-      final JsonObject notification = new JsonObject()
-          .put("userId", userId)
-          .put("message", message)
-          .put("type", type)
-          .put("timestamp", System.currentTimeMillis());
+      final JsonObject notification =
+          new JsonObject()
+              .put("userId", userId)
+              .put("message", message)
+              .put("type", type)
+              .put("timestamp", System.currentTimeMillis());
 
       // 根据通知类型选择路由键
       final String routingKey = getNotificationRoutingKey(type);
@@ -99,9 +96,7 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 发送简单文本消息
-   */
+  /** 发送简单文本消息 */
   public void sendSimpleMessage(String queueName, String message) {
     try {
       mqManager.sendToQueue(queueName, message);
@@ -113,9 +108,7 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 批量发送消息示例
-   */
+  /** 批量发送消息示例 */
   public void sendBatchMessages(String queueName, java.util.List<JsonObject> messages) {
     log.info("开始批量发送消息: queue={}, count={}", queueName, messages.size());
 
@@ -135,15 +128,14 @@ public class MessageProducerExample {
     log.info("批量发送完成: 成功={}, 失败={}", successCount, failureCount);
   }
 
-  /**
-   * 发送延迟消息示例（使用消息属性）
-   */
+  /** 发送延迟消息示例（使用消息属性） */
   public void sendDelayedMessage(String queueName, JsonObject message, long delayMs) {
     try {
       // 创建消息属性
-      final JsonObject properties = new JsonObject()
-          .put("content-type", "application/json")
-          .put("x-delay", delayMs); // 延迟属性（需要交换机支持）
+      final JsonObject properties =
+          new JsonObject()
+              .put("content-type", "application/json")
+              .put("x-delay", delayMs); // 延迟属性（需要交换机支持）
 
       mqManager.sendToQueue(queueName, message.encode(), properties);
 
@@ -155,14 +147,13 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 发送优先级消息示例
-   */
+  /** 发送优先级消息示例 */
   public void sendPriorityMessage(String queueName, JsonObject message, int priority) {
     try {
-      final JsonObject properties = new JsonObject()
-          .put("content-type", "application/json")
-          .put("priority", priority); // 优先级属性
+      final JsonObject properties =
+          new JsonObject()
+              .put("content-type", "application/json")
+              .put("priority", priority); // 优先级属性
 
       mqManager.sendToQueue(queueName, message.encode(), properties);
 
@@ -174,9 +165,7 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 获取通知路由键
-   */
+  /** 获取通知路由键 */
   private String getNotificationRoutingKey(String notificationType) {
     switch (notificationType.toUpperCase()) {
       case "EMAIL":
@@ -192,15 +181,14 @@ public class MessageProducerExample {
     }
   }
 
-  /**
-   * 健康检查 - 发送测试消息
-   */
+  /** 健康检查 - 发送测试消息 */
   public boolean healthCheck() {
     try {
-      final JsonObject testMessage = new JsonObject()
-          .put("type", "health_check")
-          .put("timestamp", System.currentTimeMillis())
-          .put("source", "MessageProducerExample");
+      final JsonObject testMessage =
+          new JsonObject()
+              .put("type", "health_check")
+              .put("timestamp", System.currentTimeMillis())
+              .put("source", "MessageProducerExample");
 
       mqManager.sendJsonToQueue("health.check.queue", testMessage);
 

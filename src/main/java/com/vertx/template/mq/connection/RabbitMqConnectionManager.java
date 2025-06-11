@@ -10,10 +10,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * 精简的RabbitMQ连接管理器
- * 支持自动重连、连接健康检查、定时状态打印
- */
+/** 精简的RabbitMQ连接管理器 支持自动重连、连接健康检查、定时状态打印 */
 @Slf4j
 @Singleton
 public class RabbitMqConnectionManager {
@@ -42,7 +39,7 @@ public class RabbitMqConnectionManager {
   /**
    * 构造器
    *
-   * @param vertx  Vert.x实例
+   * @param vertx Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
@@ -51,9 +48,7 @@ public class RabbitMqConnectionManager {
     this.config = config;
   }
 
-  /**
-   * 初始化连接管理器
-   */
+  /** 初始化连接管理器 */
   public void initialize() {
     if (!initialized.compareAndSet(false, true)) {
       log.warn("连接管理器已经初始化，跳过重复初始化");
@@ -114,9 +109,7 @@ public class RabbitMqConnectionManager {
     return initialized.get() && !shutdown.get() && client != null && client.isConnected();
   }
 
-  /**
-   * 关闭连接管理器
-   */
+  /** 关闭连接管理器 */
   public void close() {
     if (!shutdown.compareAndSet(false, true)) {
       return;
@@ -142,9 +135,7 @@ public class RabbitMqConnectionManager {
   // 私有方法
   // ================================
 
-  /**
-   * 连接到RabbitMQ
-   */
+  /** 连接到RabbitMQ */
   private void connectToRabbitMQ() {
     if (shutdown.get() || connecting.get()) {
       return;
@@ -153,8 +144,11 @@ public class RabbitMqConnectionManager {
     connecting.set(true);
 
     try {
-      log.info("尝试连接到RabbitMQ: {}:{} (第{}次尝试)",
-          config.getHost(), config.getPort(), retryCount.get() + 1);
+      log.info(
+          "尝试连接到RabbitMQ: {}:{} (第{}次尝试)",
+          config.getHost(),
+          config.getPort(),
+          retryCount.get() + 1);
 
       // 关闭旧连接
       closeConnection();
@@ -179,9 +173,7 @@ public class RabbitMqConnectionManager {
     scheduleReconnect();
   }
 
-  /**
-   * 安排重连
-   */
+  /** 安排重连 */
   private void scheduleReconnect() {
     if (shutdown.get()) {
       return;
@@ -190,28 +182,31 @@ public class RabbitMqConnectionManager {
     final int currentRetry = retryCount.getAndIncrement();
 
     if (currentRetry >= MAX_RETRY_ATTEMPTS) {
-      log.error("RabbitMQ重连失败，已达到最大重试次数: {}，将在{}ms后重置重试计数",
-          MAX_RETRY_ATTEMPTS, RECONNECT_INTERVAL * 2);
+      log.error(
+          "RabbitMQ重连失败，已达到最大重试次数: {}，将在{}ms后重置重试计数", MAX_RETRY_ATTEMPTS, RECONNECT_INTERVAL * 2);
 
       // 重置重试计数后继续尝试
-      vertx.setTimer(RECONNECT_INTERVAL * 2, id -> {
-        retryCount.set(0);
-        scheduleReconnect();
-      });
+      vertx.setTimer(
+          RECONNECT_INTERVAL * 2,
+          id -> {
+            retryCount.set(0);
+            scheduleReconnect();
+          });
       return;
     }
 
     log.debug("将在{}ms后进行第{}次重连尝试", RECONNECT_INTERVAL, currentRetry + 1);
 
-    reconnectTimerId = vertx.setTimer(RECONNECT_INTERVAL, id -> {
-      reconnectTimerId = null;
-      connectToRabbitMQ();
-    });
+    reconnectTimerId =
+        vertx.setTimer(
+            RECONNECT_INTERVAL,
+            id -> {
+              reconnectTimerId = null;
+              connectToRabbitMQ();
+            });
   }
 
-  /**
-   * 触发重连
-   */
+  /** 触发重连 */
   private void triggerReconnect() {
     if (shutdown.get() || connecting.get()) {
       return;
@@ -224,65 +219,67 @@ public class RabbitMqConnectionManager {
     vertx.runOnContext(v -> connectToRabbitMQ());
   }
 
-  /**
-   * 启动连接健康检查
-   */
+  /** 启动连接健康检查 */
   private void startHealthCheck() {
-    healthCheckTimerId = vertx.setPeriodic(HEALTH_CHECK_INTERVAL, id -> {
-      try {
-        if (shutdown.get()) {
-          vertx.cancelTimer(id);
-          return;
-        }
+    healthCheckTimerId =
+        vertx.setPeriodic(
+            HEALTH_CHECK_INTERVAL,
+            id -> {
+              try {
+                if (shutdown.get()) {
+                  vertx.cancelTimer(id);
+                  return;
+                }
 
-        // 检查连接状态
-        if (client == null || !client.isConnected()) {
-          log.debug("健康检查发现连接断开，触发重连");
-          triggerReconnect();
-        }
-      } catch (Exception e) {
-        log.error("健康检查执行异常", e);
-      }
-    });
+                // 检查连接状态
+                if (client == null || !client.isConnected()) {
+                  log.debug("健康检查发现连接断开，触发重连");
+                  triggerReconnect();
+                }
+              } catch (Exception e) {
+                log.error("健康检查执行异常", e);
+              }
+            });
 
     log.debug("连接健康检查已启动，间隔: {}ms", HEALTH_CHECK_INTERVAL);
   }
 
-  /**
-   * 启动状态打印器
-   */
+  /** 启动状态打印器 */
   private void startStatusPrinter() {
-    statusPrintTimerId = vertx.setPeriodic(STATUS_PRINT_INTERVAL, id -> {
-      try {
-        if (shutdown.get()) {
-          vertx.cancelTimer(id);
-          return;
-        }
+    statusPrintTimerId =
+        vertx.setPeriodic(
+            STATUS_PRINT_INTERVAL,
+            id -> {
+              try {
+                if (shutdown.get()) {
+                  vertx.cancelTimer(id);
+                  return;
+                }
 
-        printConnectionStatus();
-      } catch (Exception e) {
-        log.error("状态打印执行异常", e);
-      }
-    });
+                printConnectionStatus();
+              } catch (Exception e) {
+                log.error("状态打印执行异常", e);
+              }
+            });
 
     log.debug("连接状态打印器已启动，间隔: {}ms", STATUS_PRINT_INTERVAL);
   }
 
-  /**
-   * 打印连接状态
-   */
+  /** 打印连接状态 */
   private void printConnectionStatus() {
     if (client != null && client.isConnected()) {
       log.info("RabbitMQ连接状态: 已连接 - {}:{}", config.getHost(), config.getPort());
     } else {
-      log.warn("RabbitMQ连接状态: 未连接 - {}:{}, 重试次数: {}, 正在连接: {}",
-          config.getHost(), config.getPort(), retryCount.get(), connecting.get());
+      log.warn(
+          "RabbitMQ连接状态: 未连接 - {}:{}, 重试次数: {}, 正在连接: {}",
+          config.getHost(),
+          config.getPort(),
+          retryCount.get(),
+          connecting.get());
     }
   }
 
-  /**
-   * 关闭连接
-   */
+  /** 关闭连接 */
   private void closeConnection() {
     if (client != null) {
       try {
@@ -296,9 +293,7 @@ public class RabbitMqConnectionManager {
     }
   }
 
-  /**
-   * 停止所有定时器
-   */
+  /** 停止所有定时器 */
   private void stopTimers() {
     cancelReconnectTimer();
 
@@ -313,9 +308,7 @@ public class RabbitMqConnectionManager {
     }
   }
 
-  /**
-   * 取消重连定时器
-   */
+  /** 取消重连定时器 */
   private void cancelReconnectTimer() {
     if (reconnectTimerId != null) {
       vertx.cancelTimer(reconnectTimerId);

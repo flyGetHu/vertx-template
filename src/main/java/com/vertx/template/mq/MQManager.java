@@ -163,9 +163,11 @@ public class MQManager {
       }
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+      final QueueOptions options =
+          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer =
+          Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));

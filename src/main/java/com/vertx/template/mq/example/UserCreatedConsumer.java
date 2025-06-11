@@ -10,18 +10,22 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 用户创建事件消费者示例
  *
- * <p>
- * 展示如何实现一个完整的消息消费者：
+ * <p>展示如何实现一个完整的消息消费者：
+ *
  * <ul>
- * <li>使用@RabbitConsumer注解配置消费者参数</li>
- * <li>实现MessageConsumer接口处理消息</li>
- * <li>支持JSON消息解析</li>
- * <li>包含错误处理和重试机制</li>
- * <li>生命周期回调处理</li>
+ *   <li>使用@RabbitConsumer注解配置消费者参数
+ *   <li>实现MessageConsumer接口处理消息
+ *   <li>支持JSON消息解析
+ *   <li>包含错误处理和重试机制
+ *   <li>生命周期回调处理
  * </ul>
  */
-@RabbitConsumer(queueName = "user.created.queue", enabled = true, autoAck = false, // 手动确认，保证消息可靠性
-    maxRetries = 3, retryDelayMs = 2000, // 2秒重试间隔
+@RabbitConsumer(
+    queueName = "user.created.queue",
+    enabled = true,
+    autoAck = false, // 手动确认，保证消息可靠性
+    maxRetries = 3,
+    retryDelayMs = 2000, // 2秒重试间隔
     prefetchCount = 10, // 每次预取10条消息
     description = "处理用户创建事件，发送欢迎邮件和初始化用户配置")
 @Singleton
@@ -94,9 +98,9 @@ public class UserCreatedConsumer implements MessageConsumer {
   /**
    * 处理用户创建的业务逻辑
    *
-   * @param userId   用户ID
+   * @param userId 用户ID
    * @param username 用户名
-   * @param email    邮箱
+   * @param email 邮箱
    */
   private void processUserCreated(String userId, String username, String email) {
     // 1. 发送欢迎邮件
@@ -117,33 +121,25 @@ public class UserCreatedConsumer implements MessageConsumer {
     }
   }
 
-  /**
-   * 发送欢迎邮件
-   */
+  /** 发送欢迎邮件 */
   private void sendWelcomeEmail(String email, String username) {
     log.info("发送欢迎邮件到: {} (用户: {})", email, username);
     // 这里可以集成实际的邮件服务
   }
 
-  /**
-   * 初始化用户配置
-   */
+  /** 初始化用户配置 */
   private void initializeUserSettings(String userId) {
     log.info("初始化用户配置: userId={}", userId);
     // 这里可以进行用户配置的初始化
   }
 
-  /**
-   * 记录用户创建日志
-   */
+  /** 记录用户创建日志 */
   private void logUserCreation(String userId, String username, String email) {
     log.info("用户创建记录: userId={}, username={}, email={}", userId, username, email);
     // 这里可以记录到审计日志或数据库
   }
 
-  /**
-   * 处理失败的消息
-   */
+  /** 处理失败的消息 */
   private void handleFailedMessage(RabbitMQMessage message, Throwable cause) {
     // 示例：将失败消息记录到数据库或发送到死信队列
     log.warn("记录失败消息: {}, 失败原因: {}", message.body().toString(), cause.getMessage());

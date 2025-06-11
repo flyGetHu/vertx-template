@@ -14,11 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 简化的RabbitMQ连接池
  *
- * 核心功能：
- * - 连接池管理（借用/归还）
- * - 基本的连接验证
- * - 线程安全操作
- * - 优雅关闭
+ * <p>核心功能： - 连接池管理（借用/归还） - 基本的连接验证 - 线程安全操作 - 优雅关闭
  */
 @Slf4j
 @Singleton
@@ -34,22 +30,23 @@ public class ChannelPool {
   private final AtomicInteger totalConnections = new AtomicInteger(0);
 
   // 连接存储 - 使用简单的队列
-  private final ConcurrentLinkedQueue<RabbitMQClient> availableClients = new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<RabbitMQClient> availableClients =
+      new ConcurrentLinkedQueue<>();
 
   // 清理任务ID
   private Long cleanupTimerId;
 
   @Inject
-  public ChannelPool(final Vertx vertx, final RabbitMqConnectionManager connectionManager,
+  public ChannelPool(
+      final Vertx vertx,
+      final RabbitMqConnectionManager connectionManager,
       final ChannelPoolConfig config) {
     this.vertx = vertx;
     this.connectionManager = connectionManager;
     this.config = config;
   }
 
-  /**
-   * 初始化连接池
-   */
+  /** 初始化连接池 */
   public void initialize() {
     if (!initialized.compareAndSet(false, true)) {
       log.warn("连接池已经初始化，跳过重复初始化");
@@ -69,8 +66,7 @@ public class ChannelPool {
       // 启动定期清理任务
       startCleanupTask();
 
-      log.info("连接池初始化完成 - 总连接数: {}, 可用连接: {}",
-          totalConnections.get(), availableClients.size());
+      log.info("连接池初始化完成 - 总连接数: {}, 可用连接: {}", totalConnections.get(), availableClients.size());
     } catch (Exception e) {
       initialized.set(false);
       log.error("连接池初始化失败", e);
@@ -78,9 +74,7 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 借用客户端
-   */
+  /** 借用客户端 */
   public RabbitMQClient borrowClient() {
     checkState();
 
@@ -99,9 +93,7 @@ public class ChannelPool {
     throw new RuntimeException("无法获取连接：连接池已满且无法创建新连接");
   }
 
-  /**
-   * 归还客户端
-   */
+  /** 归还客户端 */
   public void returnClient(final RabbitMQClient client) {
     if (!initialized.get() || client == null) {
       closeClientSafely(client);
@@ -118,9 +110,7 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 优雅关闭
-   */
+  /** 优雅关闭 */
   public void shutdown() {
     if (!shutdown.compareAndSet(false, true)) {
       return;
@@ -149,24 +139,19 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 获取池状态
-   */
+  /** 获取池状态 */
   public String getPoolStats() {
-    return String.format("连接池状态 - 可用: %d, 总计: %d, 最大: %d, 已初始化: %s",
+    return String.format(
+        "连接池状态 - 可用: %d, 总计: %d, 最大: %d, 已初始化: %s",
         availableClients.size(), totalConnections.get(), config.getMaxSize(), initialized.get());
   }
 
-  /**
-   * 获取可用连接数
-   */
+  /** 获取可用连接数 */
   public int getAvailableCount() {
     return availableClients.size();
   }
 
-  /**
-   * 获取总连接数
-   */
+  /** 获取总连接数 */
   public int getTotalConnections() {
     return totalConnections.get();
   }
@@ -184,9 +169,7 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 创建初始连接
-   */
+  /** 创建初始连接 */
   private void createInitialConnections() {
     final int initialSize = config.getInitialSize();
     int created = 0;
@@ -207,9 +190,7 @@ public class ChannelPool {
     log.info("创建初始连接完成: {}/{}", created, initialSize);
   }
 
-  /**
-   * 获取健康的客户端
-   */
+  /** 获取健康的客户端 */
   private RabbitMQClient getHealthyClient() {
     RabbitMQClient client;
     while ((client = availableClients.poll()) != null) {
@@ -223,9 +204,7 @@ public class ChannelPool {
     return null;
   }
 
-  /**
-   * 创建新客户端
-   */
+  /** 创建新客户端 */
   private RabbitMQClient createNewClient() {
     final int current = totalConnections.get();
     if (current >= config.getMaxSize()) {
@@ -245,24 +224,18 @@ public class ChannelPool {
     return null;
   }
 
-  /**
-   * 检查客户端是否有效
-   */
+  /** 检查客户端是否有效 */
   private boolean isClientValid(final RabbitMQClient client) {
     return client != null && client.isConnected();
   }
 
-  /**
-   * 关闭客户端并减少计数
-   */
+  /** 关闭客户端并减少计数 */
   private void closeClientAndDecrement(final RabbitMQClient client) {
     closeClientSafely(client);
     totalConnections.decrementAndGet();
   }
 
-  /**
-   * 安全关闭客户端
-   */
+  /** 安全关闭客户端 */
   private void closeClientSafely(final RabbitMQClient client) {
     if (client != null) {
       try {
@@ -275,9 +248,7 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 关闭所有连接
-   */
+  /** 关闭所有连接 */
   private void closeAllConnections() {
     RabbitMQClient client;
     while ((client = availableClients.poll()) != null) {
@@ -285,18 +256,14 @@ public class ChannelPool {
     }
   }
 
-  /**
-   * 启动清理任务
-   */
+  /** 启动清理任务 */
   private void startCleanupTask() {
     // 每分钟检查一次无效连接
     cleanupTimerId = vertx.setPeriodic(60_000, id -> cleanupInvalidConnections());
     log.debug("清理任务已启动");
   }
 
-  /**
-   * 清理无效连接
-   */
+  /** 清理无效连接 */
   private void cleanupInvalidConnections() {
     if (shutdown.get()) {
       return;

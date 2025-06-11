@@ -15,8 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 消息队列Verticle 负责MQ连接初始化、消息发送接收基础设施和相关配置
  *
- * <p>
- * 主要职责： 1. 验证和加载MQ配置 2. 初始化RabbitMQ连接管理器 3. 自动扫描并启动消费者 4. 管理MQ服务的生命周期
+ * <p>主要职责： 1. 验证和加载MQ配置 2. 初始化RabbitMQ连接管理器 3. 自动扫描并启动消费者 4. 管理MQ服务的生命周期
  */
 @Slf4j
 public class MqVerticle extends AbstractVerticle {
