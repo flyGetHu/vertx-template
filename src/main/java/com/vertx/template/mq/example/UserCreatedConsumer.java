@@ -2,7 +2,6 @@ package com.vertx.template.mq.example;
 
 import com.vertx.template.mq.consumer.MessageConsumer;
 import com.vertx.template.mq.consumer.RabbitConsumer;
-
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.RabbitMQMessage;
@@ -12,19 +11,22 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 用户创建事件消费者示例
  *
- * <p>
- * 展示如何实现一个完整的消息消费者：
+ * <p>展示如何实现一个完整的消息消费者：
  *
  * <ul>
- * <li>使用@RabbitConsumer注解配置消费者参数
- * <li>实现MessageConsumer接口处理消息
- * <li>支持JSON消息解析
- * <li>包含错误处理和重试机制
- * <li>生命周期回调处理
+ *   <li>使用@RabbitConsumer注解配置消费者参数
+ *   <li>实现MessageConsumer接口处理消息
+ *   <li>支持JSON消息解析
+ *   <li>包含错误处理和重试机制
+ *   <li>生命周期回调处理
  * </ul>
  */
-@RabbitConsumer(queueName = "user.created.queue", enabled = true, autoAck = false, // 手动确认，保证消息可靠性
-    maxRetries = 3, retryDelayMs = 2000, // 2秒重试间隔
+@RabbitConsumer(
+    queueName = "user.created.queue",
+    enabled = true,
+    autoAck = false, // 手动确认，保证消息可靠性
+    maxRetries = 3,
+    retryDelayMs = 2000, // 2秒重试间隔
     prefetchCount = 10, // 每次预取10条消息
     description = "处理用户创建事件，发送欢迎邮件和初始化用户配置")
 @Singleton
