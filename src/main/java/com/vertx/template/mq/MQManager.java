@@ -173,9 +173,11 @@ public class MQManager {
       }
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+      final QueueOptions options =
+          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer =
+          Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
@@ -645,15 +647,16 @@ public class MQManager {
     // 使用默认的健康检查间隔（30秒）
     final long healthCheckInterval = 30000L;
 
-    healthCheckTimerId = vertx.setPeriodic(
-        healthCheckInterval,
-        id -> {
-          try {
-            performHealthCheck();
-          } catch (Exception e) {
-            log.error("消费者健康检查执行异常", e);
-          }
-        });
+    healthCheckTimerId =
+        vertx.setPeriodic(
+            healthCheckInterval,
+            id -> {
+              try {
+                performHealthCheck();
+              } catch (Exception e) {
+                log.error("消费者健康检查执行异常", e);
+              }
+            });
 
     log.info("消费者健康检查已启动，间隔: {}ms", healthCheckInterval);
   }
@@ -726,8 +729,7 @@ public class MQManager {
   /**
    * 执行消费者心跳检查
    *
-   * <p>
-   * 使用轻量级连接检查，避免创建临时队列
+   * <p>使用轻量级连接检查，避免创建临时队列
    */
   private boolean isConsumerHealthy(final String consumerName, final RabbitMQClient client) {
     try {
@@ -833,9 +835,11 @@ public class MQManager {
     }
 
     // 创建消费者（队列必须预先存在）
-    final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+    final QueueOptions options =
+        new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-    final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
+    final RabbitMQConsumer rabbitConsumer =
+        Future.await(client.basicConsumer(annotation.queueName(), options));
 
     // 设置消息处理器
     rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
