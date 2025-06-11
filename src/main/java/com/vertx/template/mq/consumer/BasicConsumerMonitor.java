@@ -91,16 +91,17 @@ public class BasicConsumerMonitor {
 
     final StringBuilder sb = new StringBuilder("消费者统计:\n");
     consumerStats.forEach(
-        (name, stats) -> sb.append(
-            String.format(
-                "  %s: 成功=%d, 失败=%d, 重试=%d, 重连=%d, 断连=%d, 成功率=%.1f%%\n",
-                name,
-                stats.getSuccessCount(),
-                stats.getFailureCount(),
-                stats.getRetryCount(),
-                stats.getReconnectionCount(),
-                stats.getDisconnectionCount(),
-                stats.getSuccessRate())));
+        (name, stats) ->
+            sb.append(
+                String.format(
+                    "  %s: 成功=%d, 失败=%d, 重试=%d, 重连=%d, 断连=%d, 成功率=%.1f%%\n",
+                    name,
+                    stats.getSuccessCount(),
+                    stats.getFailureCount(),
+                    stats.getRetryCount(),
+                    stats.getReconnectionCount(),
+                    stats.getDisconnectionCount(),
+                    stats.getSuccessRate())));
 
     return sb.toString();
   }

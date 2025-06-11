@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Data;
@@ -15,15 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 消费者重试管理器
  *
- * <p>
- * 负责管理消费者的重连策略和状态跟踪
- * <p>
- * 特性：
+ * <p>负责管理消费者的重连策略和状态跟踪
+ *
+ * <p>特性：
+ *
  * <ul>
- * <li>指数退避重试策略</li>
- * <li>抖动机制避免雷群效应</li>
- * <li>重试状态跟踪</li>
- * <li>可配置的重试限制</li>
+ *   <li>指数退避重试策略
+ *   <li>抖动机制避免雷群效应
+ *   <li>重试状态跟踪
+ *   <li>可配置的重试限制
  * </ul>
  */
 @Slf4j
@@ -57,18 +56,14 @@ public class ConsumerRetryManager {
     this.backoffMultiplier = 1.5;
   }
 
-  /**
-   * 注册消费者到重试管理器
-   */
+  /** 注册消费者到重试管理器 */
   public void registerConsumer(final String consumerName) {
     retryStates.putIfAbsent(consumerName, new ConsumerRetryState(consumerName));
     circuitBreakers.putIfAbsent(consumerName, new CircuitBreakerState(consumerName));
     log.debug("消费者已注册到重试管理器: {}", consumerName);
   }
 
-  /**
-   * 注销消费者
-   */
+  /** 注销消费者 */
   public void unregisterConsumer(final String consumerName) {
     // 取消正在进行的重试任务
     cancelRetryTimer(consumerName);
@@ -77,9 +72,7 @@ public class ConsumerRetryManager {
     log.debug("消费者已从重试管理器注销: {}", consumerName);
   }
 
-  /**
-   * 记录消费者重连成功
-   */
+  /** 记录消费者重连成功 */
   public void recordSuccess(final String consumerName) {
     final ConsumerRetryState state = retryStates.get(consumerName);
     final CircuitBreakerState circuitBreaker = circuitBreakers.get(consumerName);
@@ -99,7 +92,7 @@ public class ConsumerRetryManager {
    * 调度消费者重试
    *
    * @param consumerName 消费者名称
-   * @param retryAction  重试执行的动作
+   * @param retryAction 重试执行的动作
    * @return 是否成功调度重试
    */
   public boolean scheduleRetry(final String consumerName, final Runnable retryAction) {
@@ -143,42 +136,44 @@ public class ConsumerRetryManager {
       state.incrementRetryCount();
       state.updateLastRetryTime();
 
-      log.info("消费者 {} 将在 {}ms 后进行第 {} 次重连尝试",
-          consumerName, retryInterval, state.getRetryCount());
+      log.info("消费者 {} 将在 {}ms 后进行第 {} 次重连尝试", consumerName, retryInterval, state.getRetryCount());
 
       // 调度重试任务
-      final Long timerId = vertx.setTimer(retryInterval, id -> {
-        retryTimers.remove(consumerName);
-        try {
-          retryAction.run();
-          // 重试成功，在recordSuccess中会重置熔断器
-        } catch (Exception e) {
-          log.error("消费者 {} 重试执行失败", consumerName, e);
+      final Long timerId =
+          vertx.setTimer(
+              retryInterval,
+              id -> {
+                retryTimers.remove(consumerName);
+                try {
+                  retryAction.run();
+                  // 重试成功，在recordSuccess中会重置熔断器
+                } catch (Exception e) {
+                  log.error("消费者 {} 重试执行失败", consumerName, e);
 
-          // 记录熔断器失败
-          circuitBreaker.recordFailure();
+                  // 记录熔断器失败
+                  circuitBreaker.recordFailure();
 
-          // 检查是否需要开启熔断器
-          if (circuitBreaker.shouldTripCircuit(CIRCUIT_BREAKER_FAILURE_THRESHOLD)) {
-            circuitBreaker.openCircuit();
-            log.warn("消费者 {} 连续失败 {} 次，熔断器开启",
-                consumerName, CIRCUIT_BREAKER_FAILURE_THRESHOLD);
-            state.markAsStopped();
-            return;
-          }
+                  // 检查是否需要开启熔断器
+                  if (circuitBreaker.shouldTripCircuit(CIRCUIT_BREAKER_FAILURE_THRESHOLD)) {
+                    circuitBreaker.openCircuit();
+                    log.warn(
+                        "消费者 {} 连续失败 {} 次，熔断器开启", consumerName, CIRCUIT_BREAKER_FAILURE_THRESHOLD);
+                    state.markAsStopped();
+                    return;
+                  }
 
-          // 避免递归调用，使用异步方式重新调度
-          if (state.getRetryCount() < maxRetryAttempts) {
-            vertx.runOnContext(v -> scheduleRetry(consumerName, retryAction));
-          } else {
-            log.error("消费者 {} 重试次数已耗尽，停止重试", consumerName);
-            state.markAsStopped();
-          }
-        } finally {
-          // 无论成功失败，都要结束重试状态
-          state.endRetry();
-        }
-      });
+                  // 避免递归调用，使用异步方式重新调度
+                  if (state.getRetryCount() < maxRetryAttempts) {
+                    vertx.runOnContext(v -> scheduleRetry(consumerName, retryAction));
+                  } else {
+                    log.error("消费者 {} 重试次数已耗尽，停止重试", consumerName);
+                    state.markAsStopped();
+                  }
+                } finally {
+                  // 无论成功失败，都要结束重试状态
+                  state.endRetry();
+                }
+              });
 
       retryTimers.put(consumerName, timerId);
       return true;
@@ -191,9 +186,7 @@ public class ConsumerRetryManager {
     }
   }
 
-  /**
-   * 取消消费者的重试任务
-   */
+  /** 取消消费者的重试任务 */
   public void cancelRetry(final String consumerName) {
     cancelRetryTimer(consumerName);
     final ConsumerRetryState state = retryStates.get(consumerName);
@@ -203,32 +196,24 @@ public class ConsumerRetryManager {
     }
   }
 
-  /**
-   * 检查消费者是否正在重试中
-   */
+  /** 检查消费者是否正在重试中 */
   public boolean isRetrying(final String consumerName) {
     final ConsumerRetryState state = retryStates.get(consumerName);
     return state != null && (state.isRetryInProgress() || retryTimers.containsKey(consumerName));
   }
 
-  /**
-   * 检查消费者是否已停止重试
-   */
+  /** 检查消费者是否已停止重试 */
   public boolean isStopped(final String consumerName) {
     final ConsumerRetryState state = retryStates.get(consumerName);
     return state != null && state.isStopped();
   }
 
-  /**
-   * 获取消费者重试状态
-   */
+  /** 获取消费者重试状态 */
   public ConsumerRetryState getRetryState(final String consumerName) {
     return retryStates.get(consumerName);
   }
 
-  /**
-   * 手动重置消费者重试状态（用于恢复停止的消费者）
-   */
+  /** 手动重置消费者重试状态（用于恢复停止的消费者） */
   public void resetConsumer(final String consumerName) {
     final ConsumerRetryState state = retryStates.get(consumerName);
     final CircuitBreakerState circuitBreaker = circuitBreakers.get(consumerName);
@@ -245,9 +230,7 @@ public class ConsumerRetryManager {
     }
   }
 
-  /**
-   * 手动重置消费者熔断器
-   */
+  /** 手动重置消费者熔断器 */
   public void resetCircuitBreaker(final String consumerName) {
     final CircuitBreakerState circuitBreaker = circuitBreakers.get(consumerName);
     if (circuitBreaker != null) {
@@ -258,47 +241,44 @@ public class ConsumerRetryManager {
     }
   }
 
-  /**
-   * 获取消费者熔断器状态
-   */
+  /** 获取消费者熔断器状态 */
   public CircuitBreakerState getCircuitBreakerState(final String consumerName) {
     return circuitBreakers.get(consumerName);
   }
 
-  /**
-   * 获取所有消费者的重试状态摘要
-   */
+  /** 获取所有消费者的重试状态摘要 */
   public String getRetryStatusSummary() {
     if (retryStates.isEmpty()) {
       return "无消费者注册到重试管理器";
     }
 
     final StringBuilder sb = new StringBuilder("消费者重试状态:\n");
-    retryStates.forEach((name, state) -> {
-      final CircuitBreakerState circuitBreaker = circuitBreakers.get(name);
+    retryStates.forEach(
+        (name, state) -> {
+          final CircuitBreakerState circuitBreaker = circuitBreakers.get(name);
 
-      final String status;
-      if (state.isStopped()) {
-        status = "已停止";
-      } else if (isRetrying(name)) {
-        status = "重试中";
-      } else if (circuitBreaker != null && circuitBreaker.circuitOpen) {
-        status = "熔断中";
-      } else {
-        status = "正常";
-      }
+          final String status;
+          if (state.isStopped()) {
+            status = "已停止";
+          } else if (isRetrying(name)) {
+            status = "重试中";
+          } else if (circuitBreaker != null && circuitBreaker.circuitOpen) {
+            status = "熔断中";
+          } else {
+            status = "正常";
+          }
 
-      sb.append(String.format("  %s: %s (重试次数: %d", name, status, state.getRetryCount()));
+          sb.append(String.format("  %s: %s (重试次数: %d", name, status, state.getRetryCount()));
 
-      if (circuitBreaker != null) {
-        sb.append(String.format(", 连续失败: %d", circuitBreaker.getConsecutiveFailures()));
-        if (circuitBreaker.circuitOpen && circuitBreaker.circuitOpenTime != null) {
-          sb.append(String.format(", 熔断开始: %s", circuitBreaker.circuitOpenTime));
-        }
-      }
+          if (circuitBreaker != null) {
+            sb.append(String.format(", 连续失败: %d", circuitBreaker.getConsecutiveFailures()));
+            if (circuitBreaker.circuitOpen && circuitBreaker.circuitOpenTime != null) {
+              sb.append(String.format(", 熔断开始: %s", circuitBreaker.circuitOpenTime));
+            }
+          }
 
-      sb.append(")\n");
-    });
+          sb.append(")\n");
+        });
 
     return sb.toString();
   }
@@ -307,9 +287,7 @@ public class ConsumerRetryManager {
   // 私有方法
   // ================================
 
-  /**
-   * 计算重试间隔（指数退避 + 抖动）
-   */
+  /** 计算重试间隔（指数退避 + 抖动） */
   private long calculateRetryInterval(final int retryAttempt) {
     // 基础间隔 = 初始间隔 * (退避倍数 ^ 重试次数)
     double baseInterval = initialRetryInterval * Math.pow(backoffMultiplier, retryAttempt);
@@ -324,9 +302,7 @@ public class ConsumerRetryManager {
     return Math.max(finalInterval, initialRetryInterval);
   }
 
-  /**
-   * 取消重试定时器
-   */
+  /** 取消重试定时器 */
   private void cancelRetryTimer(final String consumerName) {
     final Long timerId = retryTimers.remove(consumerName);
     if (timerId != null) {
@@ -334,9 +310,7 @@ public class ConsumerRetryManager {
     }
   }
 
-  /**
-   * 消费者重试状态
-   */
+  /** 消费者重试状态 */
   @Data
   public static class ConsumerRetryState {
     private final String consumerName;
@@ -376,31 +350,23 @@ public class ConsumerRetryManager {
       return stopped.get();
     }
 
-    /**
-     * 尝试开始重试（CAS操作，线程安全）
-     */
+    /** 尝试开始重试（CAS操作，线程安全） */
     public boolean tryStartRetry() {
       return retryInProgress.compareAndSet(false, true);
     }
 
-    /**
-     * 结束重试
-     */
+    /** 结束重试 */
     public void endRetry() {
       retryInProgress.set(false);
     }
 
-    /**
-     * 检查是否正在重试中
-     */
+    /** 检查是否正在重试中 */
     public boolean isRetryInProgress() {
       return retryInProgress.get();
     }
   }
 
-  /**
-   * 熔断器状态
-   */
+  /** 熔断器状态 */
   @Data
   public static class CircuitBreakerState {
     private final String consumerName;

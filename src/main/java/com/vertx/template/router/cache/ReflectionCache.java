@@ -39,7 +39,7 @@ public class ReflectionCache {
   /**
    * 缓存控制器方法的反射信息
    *
-   * @param method          控制器方法
+   * @param method 控制器方法
    * @param controllerClass 控制器类
    */
   public void cacheMethod(Method method, Class<?> controllerClass) {
@@ -149,7 +149,8 @@ public class ReflectionCache {
       return new HttpMethodInfo(HttpMethod.DELETE, annotation.value());
     } else if (method.isAnnotationPresent(RequestMapping.class)) {
       RequestMapping annotation = method.getAnnotation(RequestMapping.class);
-      HttpMethod httpMethod = annotation.method().length > 0 ? annotation.method()[0] : HttpMethod.GET;
+      HttpMethod httpMethod =
+          annotation.method().length > 0 ? annotation.method()[0] : HttpMethod.GET;
       return new HttpMethodInfo(httpMethod, annotation.value());
     }
     return new HttpMethodInfo(HttpMethod.GET, "");
@@ -270,7 +271,8 @@ public class ReflectionCache {
 
     for (Parameter parameter : parameters) {
       if (parameter.isAnnotationPresent(RequestBody.class)) {
-        boolean needsValidation = Arrays.stream(parameter.getAnnotations()).anyMatch(a -> a instanceof Valid);
+        boolean needsValidation =
+            Arrays.stream(parameter.getAnnotations()).anyMatch(a -> a instanceof Valid);
         return new RequestBodyInfo(true, parameter.getType(), needsValidation);
       }
     }
@@ -285,15 +287,12 @@ public class ReflectionCache {
   }
 
   // 内部数据类
-  private record HttpMethodInfo(HttpMethod httpMethod, String path) {
-  }
+  private record HttpMethodInfo(HttpMethod httpMethod, String path) {}
 
-  private record AuthInfo(boolean requireAuth, AuthType authType) {
-  }
+  private record AuthInfo(boolean requireAuth, AuthType authType) {}
 
   private record RequestBodyInfo(
-      boolean hasRequestBody, Class<?> requestBodyType, boolean needsValidation) {
-  }
+      boolean hasRequestBody, Class<?> requestBodyType, boolean needsValidation) {}
 
   /** 缓存统计信息 */
   public static class CacheStats {

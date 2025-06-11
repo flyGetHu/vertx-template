@@ -155,7 +155,8 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public com.vertx.template.mq.consumer.ConsumerRetryManager provideConsumerRetryManager(final Vertx vertx) {
+  public com.vertx.template.mq.consumer.ConsumerRetryManager provideConsumerRetryManager(
+      final Vertx vertx) {
     return new com.vertx.template.mq.consumer.ConsumerRetryManager(vertx);
   }
 
