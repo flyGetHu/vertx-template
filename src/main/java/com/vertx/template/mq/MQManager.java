@@ -173,11 +173,9 @@ public class MQManager {
       }
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options =
-          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+      final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer =
-          Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
@@ -647,16 +645,15 @@ public class MQManager {
     // 使用默认的健康检查间隔（30秒）
     final long healthCheckInterval = 30000L;
 
-    healthCheckTimerId =
-        vertx.setPeriodic(
-            healthCheckInterval,
-            id -> {
-              try {
-                performHealthCheck();
-              } catch (Exception e) {
-                log.error("消费者健康检查执行异常", e);
-              }
-            });
+    healthCheckTimerId = vertx.setPeriodic(
+        healthCheckInterval,
+        id -> {
+          try {
+            performHealthCheck();
+          } catch (Exception e) {
+            log.error("消费者健康检查执行异常", e);
+          }
+        });
 
     log.info("消费者健康检查已启动，间隔: {}ms", healthCheckInterval);
   }
@@ -667,13 +664,33 @@ public class MQManager {
       return;
     }
 
-    log.debug("执行消费者健康检查，共检查 {} 个消费者", registeredConsumers.size());
+    // 只检查活跃的消费者（已启动且启用的）
+    final int activeConsumerCount = activeConsumers.size();
+    if (activeConsumerCount == 0) {
+      log.debug("无活跃消费者，跳过健康检查");
+      return;
+    }
 
-    for (final String consumerName : registeredConsumers.keySet()) {
+    log.debug("执行消费者健康检查，共检查 {} 个活跃消费者", activeConsumerCount);
+
+    for (final String consumerName : activeConsumers.keySet()) {
       final RabbitConsumer annotation = consumerAnnotations.get(consumerName);
 
+      // 检查注解是否存在
+      if (annotation == null) {
+        log.warn("消费者 {} 缺少注解信息，跳过健康检查", consumerName);
+        continue;
+      }
+
+      // 检查是否启用（双重验证：注解启用 + 实际活跃）
+      if (!annotation.enabled()) {
+        log.debug("消费者 {} 已禁用，跳过健康检查", consumerName);
+        continue;
+      }
+
       // 检查是否启用自动重连
-      if (annotation == null || !annotation.autoReconnect()) {
+      if (!annotation.autoReconnect()) {
+        log.debug("消费者 {} 未启用自动重连，跳过健康检查", consumerName);
         continue;
       }
 
@@ -709,7 +726,8 @@ public class MQManager {
   /**
    * 执行消费者心跳检查
    *
-   * <p>使用轻量级连接检查，避免创建临时队列
+   * <p>
+   * 使用轻量级连接检查，避免创建临时队列
    */
   private boolean isConsumerHealthy(final String consumerName, final RabbitMQClient client) {
     try {
@@ -770,6 +788,12 @@ public class MQManager {
       return;
     }
 
+    // 检查消费者是否被启用
+    if (!annotation.enabled()) {
+      log.warn("消费者 {} 已被禁用，跳过重连", consumerName);
+      return;
+    }
+
     try {
       // 清理旧连接
       cleanupConsumerForReconnect(consumerName);
@@ -809,11 +833,9 @@ public class MQManager {
     }
 
     // 创建消费者（队列必须预先存在）
-    final QueueOptions options =
-        new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+    final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-    final RabbitMQConsumer rabbitConsumer =
-        Future.await(client.basicConsumer(annotation.queueName(), options));
+    final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
 
     // 设置消息处理器
     rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));

@@ -10,19 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 订单状态更新消费者示例
  *
- * <p>展示不同的消费者配置选项：
+ * <p>
+ * 展示不同的消费者配置选项：
  *
  * <ul>
- *   <li>高性能场景的配置（高prefetchCount）
- *   <li>自动确认模式
- *   <li>快速重试策略
- *   <li>批量处理逻辑
+ * <li>高性能场景的配置（高prefetchCount）
+ * <li>自动确认模式
+ * <li>快速重试策略
+ * <li>批量处理逻辑
  * </ul>
  */
-@RabbitConsumer(
-    queueName = "order.status.queue",
-    enabled = true,
-    autoAck = true, // 自动确认，提高性能
+@RabbitConsumer(queueName = "order.status.queue", enabled = false, autoAck = true, // 自动确认，提高性能
     maxRetries = 5, // 更多重试次数
     retryDelayMs = 500, // 快速重试
     prefetchCount = 50, // 高性能场景，预取更多消息

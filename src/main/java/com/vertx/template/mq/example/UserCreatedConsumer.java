@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @RabbitConsumer(
     queueName = "user.created.queue",
-    enabled = true,
+    enabled = false,
     autoAck = false, // 手动确认，保证消息可靠性
     maxRetries = 3,
     retryDelayMs = 2000, // 2秒重试间隔
