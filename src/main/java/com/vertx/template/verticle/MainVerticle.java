@@ -24,16 +24,21 @@ public class MainVerticle extends AbstractVerticle {
       // 加载配置（使用await直接获取结果）
       final JsonObject config = Future.await(ConfigLoader.loadConfig(vertx));
 
-      // 部署各个Verticle
-      final DeploymentOptions options = new DeploymentOptions();
-      options.setConfig(config);
-      options.setThreadingModel(ThreadingModel.VIRTUAL_THREAD);
+      // 部署MqVerticle - 可以多实例部署用于并行处理消息
+      final DeploymentOptions mqOptions = new DeploymentOptions();
+      mqOptions.setConfig(config);
+      mqOptions.setThreadingModel(ThreadingModel.VIRTUAL_THREAD);
+      mqOptions.setInstances(3); // MQ消费者可以有多个实例
 
-      // 部署MqVerticle
-      Future.await(vertx.deployVerticle(new MqVerticle(), options));
+      Future.await(vertx.deployVerticle(MqVerticle.class, mqOptions));
 
-      // 部署WebVerticle
-      Future.await(vertx.deployVerticle(new WebVerticle(), options));
+      // 部署WebVerticle - 只需要1个实例（HTTP服务器）
+      final DeploymentOptions webOptions = new DeploymentOptions();
+      webOptions.setConfig(config);
+      webOptions.setThreadingModel(ThreadingModel.VIRTUAL_THREAD);
+      webOptions.setInstances(1); // Web服务器只需要1个实例
+
+      Future.await(vertx.deployVerticle(WebVerticle.class, webOptions));
 
       // 启动成功
       logger.info("MainVerticle启动成功 - 所有Verticle部署完成");
