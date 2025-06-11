@@ -155,12 +155,19 @@ public class AppModule extends AbstractModule {
 
   @Provides
   @Singleton
+  public com.vertx.template.mq.consumer.ConsumerRetryManager provideConsumerRetryManager(final Vertx vertx) {
+    return new com.vertx.template.mq.consumer.ConsumerRetryManager(vertx);
+  }
+
+  @Provides
+  @Singleton
   public MQManager provideMQManager(
       final Vertx vertx,
       final RabbitMqConfig config,
       final com.google.inject.Injector injector,
       final BasicConsumerMonitor monitor,
+      final com.vertx.template.mq.consumer.ConsumerRetryManager retryManager,
       final ChannelPool channelPool) {
-    return new MQManager(vertx, config, injector, monitor, channelPool);
+    return new MQManager(vertx, config, injector, monitor, retryManager, channelPool);
   }
 }

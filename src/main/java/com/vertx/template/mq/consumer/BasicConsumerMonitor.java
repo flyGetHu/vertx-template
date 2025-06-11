@@ -61,6 +61,23 @@ public class BasicConsumerMonitor {
     }
   }
 
+  /** 记录消费者重连成功 */
+  public void recordReconnection(final String consumerName) {
+    final ConsumerStats stats = consumerStats.get(consumerName);
+    if (stats != null) {
+      stats.incrementReconnection();
+      stats.updateLastActiveTime();
+    }
+  }
+
+  /** 记录消费者断连 */
+  public void recordDisconnection(final String consumerName) {
+    final ConsumerStats stats = consumerStats.get(consumerName);
+    if (stats != null) {
+      stats.incrementDisconnection();
+    }
+  }
+
   /** 获取指定消费者的统计信息 */
   public ConsumerStats getConsumerStats(final String consumerName) {
     return consumerStats.get(consumerName);
@@ -74,15 +91,16 @@ public class BasicConsumerMonitor {
 
     final StringBuilder sb = new StringBuilder("消费者统计:\n");
     consumerStats.forEach(
-        (name, stats) ->
-            sb.append(
-                String.format(
-                    "  %s: 成功=%d, 失败=%d, 重试=%d, 成功率=%.1f%%\n",
-                    name,
-                    stats.getSuccessCount(),
-                    stats.getFailureCount(),
-                    stats.getRetryCount(),
-                    stats.getSuccessRate())));
+        (name, stats) -> sb.append(
+            String.format(
+                "  %s: 成功=%d, 失败=%d, 重试=%d, 重连=%d, 断连=%d, 成功率=%.1f%%\n",
+                name,
+                stats.getSuccessCount(),
+                stats.getFailureCount(),
+                stats.getRetryCount(),
+                stats.getReconnectionCount(),
+                stats.getDisconnectionCount(),
+                stats.getSuccessRate())));
 
     return sb.toString();
   }
@@ -100,6 +118,8 @@ public class BasicConsumerMonitor {
     private final AtomicLong failureCount = new AtomicLong(0);
     private final AtomicLong retryCount = new AtomicLong(0);
     private final AtomicLong retryExhaustedCount = new AtomicLong(0);
+    private final AtomicLong reconnectionCount = new AtomicLong(0);
+    private final AtomicLong disconnectionCount = new AtomicLong(0);
     private volatile LocalDateTime lastActiveTime;
 
     public ConsumerStats(final String consumerName) {
@@ -120,6 +140,14 @@ public class BasicConsumerMonitor {
 
     public void incrementRetryExhausted() {
       retryExhaustedCount.incrementAndGet();
+    }
+
+    public void incrementReconnection() {
+      reconnectionCount.incrementAndGet();
+    }
+
+    public void incrementDisconnection() {
+      disconnectionCount.incrementAndGet();
     }
 
     public void updateLastActiveTime() {
@@ -150,6 +178,14 @@ public class BasicConsumerMonitor {
 
     public long getRetryExhaustedCount() {
       return retryExhaustedCount.get();
+    }
+
+    public long getReconnectionCount() {
+      return reconnectionCount.get();
+    }
+
+    public long getDisconnectionCount() {
+      return disconnectionCount.get();
     }
   }
 }

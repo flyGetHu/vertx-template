@@ -13,11 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 精简的RabbitMQ连接管理器
  *
- * 特性:
- * - 自动重连（指数退避策略）
- * - 连接健康检查
- * - 定时状态打印
- * - 抖动机制避免雷群效应
+ * <p>特性: - 自动重连（指数退避策略） - 连接健康检查 - 定时状态打印 - 抖动机制避免雷群效应
  */
 @Slf4j
 @Singleton
@@ -49,7 +45,7 @@ public class RabbitMqConnectionManager {
   /**
    * 构造器
    *
-   * @param vertx  Vert.x实例
+   * @param vertx Vert.x实例
    * @param config RabbitMQ配置
    */
   @Inject
@@ -193,15 +189,15 @@ public class RabbitMqConnectionManager {
 
     if (currentRetry >= MAX_RETRY_ATTEMPTS) {
       final long resetInterval = MAX_RECONNECT_INTERVAL * 2; // 2分钟后重置
-      log.error(
-          "RabbitMQ重连失败，已达到最大重试次数: {}，将在{}ms后重置重试计数",
-          MAX_RETRY_ATTEMPTS, resetInterval);
+      log.error("RabbitMQ重连失败，已达到最大重试次数: {}，将在{}ms后重置重试计数", MAX_RETRY_ATTEMPTS, resetInterval);
 
       // 重置重试计数后继续尝试
-      vertx.setTimer(resetInterval, id -> {
-        retryCount.set(0);
-        scheduleReconnect();
-      });
+      vertx.setTimer(
+          resetInterval,
+          id -> {
+            retryCount.set(0);
+            scheduleReconnect();
+          });
       return;
     }
 
@@ -209,10 +205,13 @@ public class RabbitMqConnectionManager {
     final long reconnectInterval = calculateReconnectInterval(currentRetry);
     log.debug("将在{}ms后进行第{}次重连尝试", reconnectInterval, currentRetry + 1);
 
-    reconnectTimerId = vertx.setTimer(reconnectInterval, id -> {
-      reconnectTimerId = null;
-      connectToRabbitMQ();
-    });
+    reconnectTimerId =
+        vertx.setTimer(
+            reconnectInterval,
+            id -> {
+              reconnectTimerId = null;
+              connectToRabbitMQ();
+            });
   }
 
   /**
@@ -250,44 +249,46 @@ public class RabbitMqConnectionManager {
 
   /** 启动连接健康检查 */
   private void startHealthCheck() {
-    healthCheckTimerId = vertx.setPeriodic(
-        HEALTH_CHECK_INTERVAL,
-        id -> {
-          try {
-            if (shutdown.get()) {
-              vertx.cancelTimer(id);
-              return;
-            }
+    healthCheckTimerId =
+        vertx.setPeriodic(
+            HEALTH_CHECK_INTERVAL,
+            id -> {
+              try {
+                if (shutdown.get()) {
+                  vertx.cancelTimer(id);
+                  return;
+                }
 
-            // 检查连接状态
-            if (client == null || !client.isConnected()) {
-              log.debug("健康检查发现连接断开，触发重连");
-              triggerReconnect();
-            }
-          } catch (Exception e) {
-            log.error("健康检查执行异常", e);
-          }
-        });
+                // 检查连接状态
+                if (client == null || !client.isConnected()) {
+                  log.debug("健康检查发现连接断开，触发重连");
+                  triggerReconnect();
+                }
+              } catch (Exception e) {
+                log.error("健康检查执行异常", e);
+              }
+            });
 
     log.debug("连接健康检查已启动，间隔: {}ms", HEALTH_CHECK_INTERVAL);
   }
 
   /** 启动状态打印器 */
   private void startStatusPrinter() {
-    statusPrintTimerId = vertx.setPeriodic(
-        STATUS_PRINT_INTERVAL,
-        id -> {
-          try {
-            if (shutdown.get()) {
-              vertx.cancelTimer(id);
-              return;
-            }
+    statusPrintTimerId =
+        vertx.setPeriodic(
+            STATUS_PRINT_INTERVAL,
+            id -> {
+              try {
+                if (shutdown.get()) {
+                  vertx.cancelTimer(id);
+                  return;
+                }
 
-            printConnectionStatus();
-          } catch (Exception e) {
-            log.error("状态打印执行异常", e);
-          }
-        });
+                printConnectionStatus();
+              } catch (Exception e) {
+                log.error("状态打印执行异常", e);
+              }
+            });
 
     log.debug("连接状态打印器已启动，间隔: {}ms", STATUS_PRINT_INTERVAL);
   }

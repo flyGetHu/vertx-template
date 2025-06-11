@@ -4,6 +4,7 @@ import com.google.inject.Injector;
 import com.vertx.template.mq.config.RabbitMqConfig;
 import com.vertx.template.mq.connection.ChannelPool;
 import com.vertx.template.mq.consumer.BasicConsumerMonitor;
+import com.vertx.template.mq.consumer.ConsumerRetryManager;
 import com.vertx.template.mq.consumer.MessageConsumer;
 import com.vertx.template.mq.consumer.RabbitConsumer;
 import io.vertx.core.Future;
@@ -32,6 +33,7 @@ public class MQManager {
   private final RabbitMqConfig config;
   private final Injector injector;
   private final BasicConsumerMonitor monitor;
+  private final ConsumerRetryManager retryManager;
 
   // 生产者相关字段
   private final ChannelPool channelPool;
@@ -42,17 +44,22 @@ public class MQManager {
   private final Map<String, MessageConsumer> registeredConsumers = new ConcurrentHashMap<>();
   private final Map<String, RabbitConsumer> consumerAnnotations = new ConcurrentHashMap<>();
 
+  // 健康检查定时器
+  private Long healthCheckTimerId;
+
   @Inject
   public MQManager(
       final Vertx vertx,
       final RabbitMqConfig config,
       final Injector injector,
       final BasicConsumerMonitor monitor,
+      final ConsumerRetryManager retryManager,
       final ChannelPool channelPool) {
     this.vertx = vertx;
     this.config = config;
     this.injector = injector;
     this.monitor = monitor;
+    this.retryManager = retryManager;
     this.channelPool = channelPool;
   }
 
@@ -80,6 +87,9 @@ public class MQManager {
       }
 
       log.info("消费者扫描和启动完成，共启动 {} 个消费者", activeConsumers.size());
+
+      // 启动消费者健康检查
+      startConsumerHealthCheck();
     } catch (Exception e) {
       log.error("扫描消费者失败", e);
       throw new RuntimeException("扫描消费者失败", e);
@@ -163,17 +173,16 @@ public class MQManager {
       }
 
       // 创建消费者（队列必须预先存在）
-      final QueueOptions options =
-          new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
+      final QueueOptions options = new QueueOptions().setAutoAck(annotation.autoAck()).setMaxInternalQueueSize(1000);
 
-      final RabbitMQConsumer rabbitConsumer =
-          Future.await(client.basicConsumer(annotation.queueName(), options));
+      final RabbitMQConsumer rabbitConsumer = Future.await(client.basicConsumer(annotation.queueName(), options));
 
       // 设置消息处理器
       rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
 
       activeConsumers.put(consumerName, rabbitConsumer);
       monitor.registerConsumer(consumerName);
+      retryManager.registerConsumer(consumerName);
 
       log.info(
           "消费者 {} 启动成功 - 队列: {}, prefetch: {}",
@@ -209,6 +218,7 @@ public class MQManager {
         Future.await(client.stop());
       }
       monitor.unregisterConsumer(consumerName);
+      retryManager.unregisterConsumer(consumerName);
       log.info("消费者 {} 已停止", consumerName);
     } catch (Exception cause) {
       log.error("停止消费者 {} 失败", consumerName, cause);
@@ -229,6 +239,9 @@ public class MQManager {
       consumerClients.clear();
       registeredConsumers.clear();
       consumerAnnotations.clear();
+
+      // 停止健康检查
+      stopHealthCheck();
 
       log.info("所有消费者已停止");
 
@@ -611,5 +624,263 @@ public class MQManager {
 
   public BasicConsumerMonitor getMonitor() {
     return monitor;
+  }
+
+  public ConsumerRetryManager getRetryManager() {
+    return retryManager;
+  }
+
+  // ========================================
+  // 消费者健康检查和重连功能
+  // ========================================
+
+  /**
+   * 启动消费者健康检查
+   */
+  private void startConsumerHealthCheck() {
+    // 如果没有消费者，不启动健康检查
+    if (registeredConsumers.isEmpty()) {
+      log.debug("无消费者注册，跳过健康检查启动");
+      return;
+    }
+
+    // 使用默认的健康检查间隔（30秒）
+    final long healthCheckInterval = 30000L;
+
+    healthCheckTimerId = vertx.setPeriodic(healthCheckInterval, id -> {
+      try {
+        performHealthCheck();
+      } catch (Exception e) {
+        log.error("消费者健康检查执行异常", e);
+      }
+    });
+
+    log.info("消费者健康检查已启动，间隔: {}ms", healthCheckInterval);
+  }
+
+  /**
+   * 执行健康检查
+   */
+  private void performHealthCheck() {
+    if (registeredConsumers.isEmpty()) {
+      return;
+    }
+
+    log.debug("执行消费者健康检查，共检查 {} 个消费者", registeredConsumers.size());
+
+    for (final String consumerName : registeredConsumers.keySet()) {
+      final RabbitConsumer annotation = consumerAnnotations.get(consumerName);
+
+      // 检查是否启用自动重连
+      if (annotation == null || !annotation.autoReconnect()) {
+        continue;
+      }
+
+      // 检查消费者连接状态
+      if (!isConsumerConnected(consumerName)) {
+        log.warn("检测到消费者 {} 连接断开，触发重连", consumerName);
+        monitor.recordDisconnection(consumerName);
+        triggerConsumerReconnect(consumerName);
+      }
+    }
+  }
+
+  /**
+   * 检查消费者是否连接正常
+   */
+  private boolean isConsumerConnected(final String consumerName) {
+    final RabbitMQClient client = consumerClients.get(consumerName);
+    final RabbitMQConsumer consumer = activeConsumers.get(consumerName);
+
+    // 基础连接检查
+    if (client == null || !client.isConnected() || consumer == null) {
+      return false;
+    }
+
+    // 检查消费者连接是否正常
+    try {
+      // 使用轻量级连接检查，不创建任何新资源
+      return isConsumerHealthy(consumerName, client);
+    } catch (Exception e) {
+      log.debug("消费者 {} 健康检查失败: {}", consumerName, e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * 执行消费者心跳检查
+   *
+   * <p>
+   * 使用轻量级连接检查，避免创建临时队列
+   */
+  private boolean isConsumerHealthy(final String consumerName, final RabbitMQClient client) {
+    try {
+      // 只检查客户端连接状态，避免创建任何新资源
+      // 这是最轻量级的健康检查方式
+      final boolean isConnected = client.isConnected();
+
+      if (isConnected) {
+        log.debug("消费者 {} 健康检查通过 - 连接正常", consumerName);
+      } else {
+        log.debug("消费者 {} 健康检查失败 - 连接断开", consumerName);
+      }
+
+      return isConnected;
+
+    } catch (Exception e) {
+      log.debug("消费者 {} 健康检查异常: {}", consumerName, e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * 触发消费者重连
+   */
+  private void triggerConsumerReconnect(final String consumerName) {
+    // 检查是否已在重试中
+    if (retryManager.isRetrying(consumerName)) {
+      log.debug("消费者 {} 已在重试中，跳过重复触发", consumerName);
+      return;
+    }
+
+    // 检查是否已停止重试
+    if (retryManager.isStopped(consumerName)) {
+      log.debug("消费者 {} 重试已停止，跳过触发", consumerName);
+      return;
+    }
+
+    // 调度重连任务
+    retryManager.scheduleRetry(consumerName, () -> {
+      try {
+        reconnectConsumer(consumerName);
+      } catch (Exception e) {
+        log.error("消费者 {} 重连失败", consumerName, e);
+        throw new RuntimeException("消费者重连失败", e);
+      }
+    });
+  }
+
+  /**
+   * 重连消费者
+   */
+  private void reconnectConsumer(final String consumerName) {
+    log.info("开始重连消费者: {}", consumerName);
+
+    final MessageConsumer consumer = registeredConsumers.get(consumerName);
+    final RabbitConsumer annotation = consumerAnnotations.get(consumerName);
+
+    if (consumer == null || annotation == null) {
+      log.error("消费者 {} 信息缺失，无法重连", consumerName);
+      return;
+    }
+
+    try {
+      // 清理旧连接
+      cleanupConsumerForReconnect(consumerName);
+
+      // 重新启动消费者
+      startConsumerInternal(consumerName, consumer, annotation);
+
+      // 记录重连成功
+      retryManager.recordSuccess(consumerName);
+      monitor.recordReconnection(consumerName);
+
+      log.info("消费者 {} 重连成功", consumerName);
+
+    } catch (Exception e) {
+      log.error("消费者 {} 重连失败", consumerName, e);
+      throw e;
+    }
+  }
+
+  /**
+   * 重新启动消费者的内部实现
+   */
+  private void startConsumerInternal(
+      final String consumerName,
+      final MessageConsumer consumer,
+      final RabbitConsumer annotation) {
+
+    log.debug("内部启动消费者: {} - 队列: {}", consumerName, annotation.queueName());
+
+    // 为每个消费者创建独立的客户端
+    final RabbitMQClient client = RabbitMQClient.create(vertx, config.toVertxOptions());
+    consumerClients.put(consumerName, client);
+
+    Future.await(client.start());
+
+    // 设置QoS - Prefetch Count
+    final int prefetchCount = annotation.prefetchCount();
+    if (prefetchCount > 0) {
+      Future.await(client.basicQos(prefetchCount));
+      log.debug("消费者 {} QoS设置完成: prefetchCount={}", consumerName, prefetchCount);
+    }
+
+    // 创建消费者（队列必须预先存在）
+    final QueueOptions options = new QueueOptions()
+        .setAutoAck(annotation.autoAck())
+        .setMaxInternalQueueSize(1000);
+
+    final RabbitMQConsumer rabbitConsumer = Future.await(
+        client.basicConsumer(annotation.queueName(), options));
+
+    // 设置消息处理器
+    rabbitConsumer.handler(message -> handleMessage(consumer, annotation, message));
+
+    activeConsumers.put(consumerName, rabbitConsumer);
+
+    log.debug("消费者 {} 内部启动完成", consumerName);
+  }
+
+  /**
+   * 清理消费者连接以便重连
+   */
+  private void cleanupConsumerForReconnect(final String consumerName) {
+    try {
+      // 移除活跃消费者
+      activeConsumers.remove(consumerName);
+
+      // 关闭客户端连接
+      final RabbitMQClient client = consumerClients.remove(consumerName);
+      if (client != null) {
+        try {
+          if (client.isConnected()) {
+            Future.await(client.stop());
+          }
+        } catch (Exception e) {
+          log.warn("关闭消费者 {} 客户端连接时发生异常: {}", consumerName, e.getMessage());
+        }
+      }
+
+      log.debug("消费者 {} 连接已清理", consumerName);
+    } catch (Exception e) {
+      log.error("清理消费者 {} 连接失败", consumerName, e);
+    }
+  }
+
+  /**
+   * 停止健康检查
+   */
+  private void stopHealthCheck() {
+    if (healthCheckTimerId != null) {
+      vertx.cancelTimer(healthCheckTimerId);
+      healthCheckTimerId = null;
+      log.info("消费者健康检查已停止");
+    }
+  }
+
+  /**
+   * 手动重置消费者重试状态
+   */
+  public void resetConsumerRetry(final String consumerName) {
+    retryManager.resetConsumer(consumerName);
+    log.info("消费者 {} 重试状态已手动重置", consumerName);
+  }
+
+  /**
+   * 获取消费者重连状态摘要
+   */
+  public String getConsumerRetryStatusSummary() {
+    return retryManager.getRetryStatusSummary();
   }
 }
